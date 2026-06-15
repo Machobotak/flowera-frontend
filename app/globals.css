@@ -1,26 +1,120 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ──────────────────────────── Design Tokens ──────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Primary */
+  --color-primary: #8c4a5c;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #f5a3b7;
+  --color-on-primary-container: #743648;
+  --color-primary-fixed: #ffd9e0;
+  --color-primary-fixed-dim: #ffb1c3;
+  --color-on-primary-fixed: #3a071a;
+  --color-on-primary-fixed-variant: #703345;
+  --color-inverse-primary: #ffb1c3;
+
+  /* Secondary */
+  --color-secondary: #3a6847;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #b9ecc1;
+  --color-on-secondary-container: #3e6c4a;
+  --color-secondary-fixed: #bcefc4;
+  --color-secondary-fixed-dim: #a0d2a9;
+  --color-on-secondary-fixed: #00210d;
+  --color-on-secondary-fixed-variant: #225030;
+
+  /* Tertiary */
+  --color-tertiary: #735c00;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #dcb63e;
+  --color-on-tertiary-container: #5b4800;
+  --color-tertiary-fixed: #ffe088;
+  --color-tertiary-fixed-dim: #e9c349;
+  --color-on-tertiary-fixed: #241a00;
+  --color-on-tertiary-fixed-variant: #574500;
+
+  /* Error */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* Surface */
+  --color-surface: #fff8f7;
+  --color-on-surface: #201a1b;
+  --color-surface-variant: #ecdfe1;
+  --color-on-surface-variant: #524346;
+  --color-surface-dim: #e4d7d8;
+  --color-surface-bright: #fff8f7;
+  --color-surface-tint: #8c4a5c;
+  --color-surface-container: #f8ebec;
+  --color-surface-container-low: #fef0f2;
+  --color-surface-container-high: #f2e5e6;
+  --color-surface-container-highest: #ecdfe1;
+  --color-surface-container-lowest: #ffffff;
+
+  /* Background & Outline */
+  --color-background: #fff8f7;
+  --color-on-background: #201a1b;
+  --color-outline: #847376;
+  --color-outline-variant: #d7c1c5;
+  --color-inverse-surface: #362f30;
+  --color-inverse-on-surface: #fbeeef;
+
+  /* Spacing */
+  --spacing-stack-sm: 12px;
+  --spacing-stack-md: 24px;
+  --spacing-stack-lg: 48px;
+  --spacing-margin-mobile: 20px;
+  --spacing-margin-desktop: 64px;
+  --spacing-gutter: 24px;
+  --spacing-container-max: 1280px;
+  --spacing-unit: 8px;
+
+  /* Fonts */
+  --font-headline: var(--font-playfair), "Playfair Display", serif;
+  --font-body: var(--font-montserrat), "Montserrat", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ──────────────────────────── Base Styles ──────────────────────────── */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* ──────────────────────────── Utility Classes ──────────────────────────── */
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* Scrollbar hiding */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom shadows */
+.shadow-soft {
+  box-shadow: 0 4px 20px -2px rgba(31, 77, 46, 0.08);
+}
+.shadow-float {
+  box-shadow: 0 8px 30px rgba(31, 77, 46, 0.12);
+}
+
+/* Glass effect */
+.glass-effect {
+  backdrop-filter: blur(20px);
+  background: rgba(255, 248, 247, 0.9);
+}
+
+/* Entrance animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
