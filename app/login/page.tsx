@@ -9,7 +9,7 @@ const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
 
 const TESTIMONIALS = [
   {
-    text: "FloraGrace mengubah cara saya mengirim bunga. Selalu segar dan indah!",
+    text: "Flowera mengubah cara saya mengirim bunga. Selalu segar dan indah!",
     author: "Sarah K.",
     role: "Pelanggan Setia",
   },
@@ -53,9 +53,9 @@ export default function LoginPage() {
           <div>
             <Link
               href="/"
-              className="font-headline text-[28px] font-bold text-white tracking-tight"
+              className="inline-block"
             >
-              FloraGrace
+              <img src="/logo-v1.png" alt="Flowera" className="h-8 w-auto brightness-0 invert" />
             </Link>
             <p className="mt-2 text-white/70 text-[14px] font-body max-w-xs">
               The world&apos;s most curated marketplace for meaningful floral gifts.
@@ -123,9 +123,9 @@ export default function LoginPage() {
             {/* Mobile brand */}
             <Link
               href="/"
-              className="lg:hidden font-headline text-[24px] font-bold text-primary tracking-tight inline-block mb-6"
+              className="lg:hidden inline-block mb-6"
             >
-              FloraGrace
+              <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
             </Link>
             <h1 className="font-headline text-[28px] leading-9 font-semibold text-on-surface">
               Selamat Datang Kembali

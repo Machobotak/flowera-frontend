@@ -1,15 +1,56 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
+
+/* ──────────────────────────── Types ──────────────────────────── */
+
+interface NavbarProps {
+  isLoggedIn?: boolean;
+  user?: {
+    name: string;
+    avatar: string;
+    memberLabel?: string;
+  };
+}
+
+/* ──────────────────────────── Constants ──────────────────────────── */
+
+const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
 
 const MOBILE_NAV_ITEMS = [
-  { icon: "home", label: "Home", href: "#", active: true },
+  { icon: "home", label: "Home", href: "/", active: true },
   { icon: "grid_view", label: "Categories", href: "#" },
-  { icon: "local_mall", label: "Orders", href: "#" },
-  { icon: "person", label: "Profile", href: "#" },
+  { icon: "local_mall", label: "Orders", href: "/profile" },
+  { icon: "person", label: "Profile", href: "/profile" },
 ];
 
-export default function Navbar() {
+const USER_MENU_ITEMS = [
+  { icon: "person", label: "Akun Saya", href: "/profile" },
+  { icon: "shopping_bag", label: "Pesanan Saya", href: "/profile" },
+  { icon: "favorite", label: "Wishlist", href: "#" },
+  { icon: "confirmation_number", label: "Voucher", href: "#" },
+  { icon: "settings", label: "Pengaturan", href: "#" },
+];
+
+/* ──────────────────────────── Component ──────────────────────────── */
+
+export default function Navbar({ isLoggedIn = false, user }: NavbarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <>
       {/* Desktop Header */}
@@ -17,10 +58,10 @@ export default function Navbar() {
         <div className="flex items-center justify-between px-margin-desktop py-4 max-w-container-max mx-auto gap-8">
           {/* Brand */}
           <a
-            className="font-headline-md text-headline-md font-bold text-primary tracking-tight shrink-0"
-            href="#"
+            className="shrink-0"
+            href="/"
           >
-            FloraGrace
+            <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
           </a>
 
           {/* Search Bar */}
@@ -51,21 +92,85 @@ export default function Navbar() {
                   notifications
                 </span>
               </button>
-              <button className="hover:opacity-80 transition-opacity">
-                <span className="material-symbols-outlined text-on-surface-variant">
-                  account_circle
-                </span>
-              </button>
             </div>
 
-            <div className="flex gap-3">
-              <a href="/login" className="px-5 py-2 font-label-md text-primary hover:bg-primary-container/20 rounded-xl transition-all">
-                Masuk
-              </a>
-              <a href="/register" className="px-5 py-2 font-label-md bg-primary text-white rounded-xl shadow-soft hover:shadow-float active:scale-95 transition-all">
-                Daftar
-              </a>
-            </div>
+            {/* ── Auth Section ── */}
+            {isLoggedIn && user ? (
+              /* Logged-in: Avatar + Dropdown */
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+                >
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+                    <img
+                      alt={user.name}
+                      src={user.avatar}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <p className="text-[13px] font-semibold text-on-surface leading-4">
+                      {user.name}
+                    </p>
+                    {user.memberLabel && (
+                      <p className="text-[10px] text-on-surface-variant">
+                        {user.memberLabel}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`material-symbols-outlined text-on-surface-variant text-[18px] transition-transform ${menuOpen ? "rotate-180" : ""}`}>
+                    expand_more
+                  </span>
+                </button>
+
+                {/* Dropdown */}
+                {menuOpen && (
+                  <div className="absolute right-0 top-14 w-56 bg-white rounded-xl shadow-float border border-outline-variant/20 overflow-hidden animate-[fadeIn_0.2s_ease] z-50">
+                    {/* User header */}
+                    <div className="px-4 py-3 border-b border-outline-variant/20 bg-surface-container-low">
+                      <p className="text-[13px] font-semibold text-on-surface">{user.name}</p>
+                      {user.memberLabel && (
+                        <p className="text-[11px] text-primary font-medium">{user.memberLabel}</p>
+                      )}
+                    </div>
+
+                    {/* Menu items */}
+                    <div className="py-1">
+                      {USER_MENU_ITEMS.map((item) => (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+                          {item.label}
+                        </a>
+                      ))}
+                    </div>
+
+                    {/* Logout */}
+                    <div className="border-t border-outline-variant/20 py-1">
+                      <button className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-error hover:bg-error-container/20 w-full transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">logout</span>
+                        Keluar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Not logged-in: Login & Register buttons */
+              <div className="flex gap-3">
+                <a href="/login" className="px-5 py-2 font-label-md text-primary hover:bg-primary-container/20 rounded-xl transition-all">
+                  Masuk
+                </a>
+                <a href="/register" className="px-5 py-2 font-label-md bg-primary text-white rounded-xl shadow-soft hover:shadow-float active:scale-95 transition-all">
+                  Daftar
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -84,7 +189,7 @@ export default function Navbar() {
           >
             <span
               className="material-symbols-outlined"
-              style={item.active ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              style={item.active ? FILL_STYLE : undefined}
             >
               {item.icon}
             </span>

@@ -9,7 +9,7 @@ const FOOTER_LINKS = {
   ],
   partners: [
     { label: "Florist Partners", href: "#" },
-    { label: "Sell on FloraGrace", href: "#" },
+    { label: "Sell on Flowera", href: "#" },
     { label: "Affiliate Program", href: "#" },
   ],
 };
@@ -23,9 +23,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 w-full mb-12">
           {/* Brand */}
           <div className="col-span-1 space-y-4">
-            <h5 className="font-headline-md text-headline-md text-primary">
-              FloraGrace
-            </h5>
+            <a href="/">
+              <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
+            </a>
             <p className="font-body-md text-on-surface-variant">
               The world&apos;s most curated marketplace for meaningful floral
               gifts and botanical wonders.
@@ -92,7 +92,7 @@ export default function Footer() {
         </div>
 
         <p className="text-on-surface-variant font-label-md text-center pt-8 border-t border-outline-variant/10 w-full opacity-60">
-          &copy; 2024 FloraGrace Marketplace. Crafted for life&apos;s meaningful
+          &copy; 2024 Flowera Marketplace. Crafted for life&apos;s meaningful
           moments.
         </p>
       </div>

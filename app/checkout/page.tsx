@@ -669,7 +669,7 @@ export default function CheckoutPage() {
                   verified_user
                 </span>
                 <div>
-                  <p className="text-[13px] font-semibold text-on-surface">Garansi FloraGrace</p>
+                  <p className="text-[13px] font-semibold text-on-surface">Garansi Flowera</p>
                   <p className="text-[11px] text-on-surface-variant leading-4 mt-1">
                     Jika bunga tidak segar saat diterima, kami ganti 100% tanpa syarat. Kepuasan pelanggan adalah prioritas kami.
                   </p>

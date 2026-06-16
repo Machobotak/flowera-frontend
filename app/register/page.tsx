@@ -82,9 +82,9 @@ export default function RegisterPage() {
           <div>
             <Link
               href="/"
-              className="font-headline text-[28px] font-bold text-white tracking-tight"
+              className="inline-block"
             >
-              FloraGrace
+              <img src="/logo-v1.png" alt="Flowera" className="h-8 w-auto brightness-0 invert" />
             </Link>
             <p className="mt-2 text-white/70 text-[14px] font-body max-w-xs">
               Bergabunglah dengan ribuan pecinta bunga dan temukan keindahan di setiap momen.
@@ -125,9 +125,9 @@ export default function RegisterPage() {
             {/* Mobile brand */}
             <Link
               href="/"
-              className="lg:hidden font-headline text-[24px] font-bold text-primary tracking-tight inline-block mb-5"
+              className="lg:hidden inline-block mb-5"
             >
-              FloraGrace
+              <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
             </Link>
             <h1 className="font-headline text-[28px] leading-9 font-semibold text-on-surface">
               Buat Akun Baru
@@ -363,7 +363,7 @@ export default function RegisterPage() {
                 <button type="button" className="text-primary font-semibold hover:underline">
                   Kebijakan Privasi
                 </button>{" "}
-                FloraGrace.
+                Flowera.
               </span>
             </label>
 
