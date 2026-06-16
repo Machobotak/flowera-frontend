@@ -1,6 +1,9 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import type { AccessoryState, TouchState } from "@/types/product";
 import { BASE_PRICE } from "@/data/product";
+import { useAuth } from "@/contexts/auth-context";
 
 /* ──────────────────────────── Props ──────────────────────────── */
 
@@ -19,6 +22,27 @@ export default function OrderSummary({
   touches,
   total,
 }: OrderSummaryProps) {
+  const { isLoggedIn } = useAuth();
+  const [showToast, setShowToast] = useState(false);
+
+  const handleOrderNow = () => {
+    if (!isLoggedIn) {
+      window.location.href = "/login?redirect=/cart";
+      return;
+    }
+    window.location.href = "/cart";
+  };
+
+  const handleAddToCart = () => {
+    if (!isLoggedIn) {
+      window.location.href = "/login?redirect=/products";
+      return;
+    }
+    // Show success toast
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
   return (
     <div className="col-span-12 lg:col-span-3">
       <div className="sticky top-24 bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
@@ -82,10 +106,16 @@ export default function OrderSummary({
 
         {/* Actions */}
         <div className="space-y-3">
-          <button className="w-full bg-primary text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-on-primary-container transition-colors active:scale-[0.98]">
+          <button
+            onClick={handleOrderNow}
+            className="w-full bg-primary text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-on-primary-container transition-colors active:scale-[0.98]"
+          >
             Order Now
           </button>
-          <button className="w-full border border-primary text-primary py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-primary/5 transition-colors active:scale-[0.98]">
+          <button
+            onClick={handleAddToCart}
+            className="w-full border border-primary text-primary py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-primary/5 transition-colors active:scale-[0.98]"
+          >
             Add to Cart
           </button>
           <button className="w-full text-primary py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-primary/5 rounded-lg transition-colors">
@@ -100,6 +130,18 @@ export default function OrderSummary({
           Standard delivery: Tomorrow, 2pm
         </p>
       </div>
+
+      {/* Toast notification */}
+      {showToast && (
+        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-[fadeIn_0.3s_ease]">
+          <div className="bg-secondary text-white px-6 py-3.5 rounded-xl shadow-float flex items-center gap-3">
+            <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              check_circle
+            </span>
+            <span className="text-[14px] font-semibold">Berhasil ditambahkan ke keranjang!</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

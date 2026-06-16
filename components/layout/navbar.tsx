@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-
-/* ──────────────────────────── Types ──────────────────────────── */
-
-interface NavbarProps {
-  isLoggedIn?: boolean;
-  user?: {
-    name: string;
-    avatar: string;
-    memberLabel?: string;
-  };
-}
+import { useAuth } from "@/contexts/auth-context";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
@@ -25,7 +15,7 @@ const MOBILE_NAV_ITEMS = [
 ];
 
 const USER_MENU_ITEMS = [
-  { icon: "person", label: "Akun Saya", href: "/profile" },
+  { icon: "person", label: "Akun Saya", href: "/profile/account" },
   { icon: "shopping_bag", label: "Pesanan Saya", href: "/profile" },
   { icon: "favorite", label: "Wishlist", href: "#" },
   { icon: "confirmation_number", label: "Voucher", href: "#" },
@@ -34,7 +24,8 @@ const USER_MENU_ITEMS = [
 
 /* ──────────────────────────── Component ──────────────────────────── */
 
-export default function Navbar({ isLoggedIn = false, user }: NavbarProps) {
+export default function Navbar() {
+  const { isLoggedIn, user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -50,6 +41,12 @@ export default function Navbar({ isLoggedIn = false, user }: NavbarProps) {
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  const handleLogout = () => {
+    setMenuOpen(false);
+    logout();
+    window.location.href = "/";
+  };
 
   return (
     <>
@@ -152,7 +149,10 @@ export default function Navbar({ isLoggedIn = false, user }: NavbarProps) {
 
                     {/* Logout */}
                     <div className="border-t border-outline-variant/20 py-1">
-                      <button className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-error hover:bg-error-container/20 w-full transition-colors">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-error hover:bg-error-container/20 w-full transition-colors"
+                      >
                         <span className="material-symbols-outlined text-[18px]">logout</span>
                         Keluar
                       </button>

@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
@@ -23,14 +25,25 @@ const TESTIMONIALS = [
 /* ──────────────────────────── Page ──────────────────────────── */
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
+
+  // Auto-fill for prototype
+  const [email, setEmail] = useState("eleanor.vance@email.com");
+  const [password, setPassword] = useState("prototype123");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic
+    setIsLoading(true);
+    // Simulate a short login delay
+    setTimeout(() => {
+      login();
+      window.location.href = redirectTo;
+    }, 600);
   };
 
   return (
@@ -133,6 +146,19 @@ export default function LoginPage() {
             <p className="mt-2 text-on-surface-variant text-[14px] font-body">
               Masuk ke akun kamu untuk melanjutkan belanja bunga.
             </p>
+          </div>
+
+          {/* Prototype notice */}
+          <div className="bg-secondary/10 border border-secondary/20 rounded-xl px-4 py-3 flex items-start gap-3">
+            <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5" style={FILL_STYLE}>
+              info
+            </span>
+            <div>
+              <p className="text-[13px] font-semibold text-on-surface">Mode Prototype</p>
+              <p className="text-[12px] text-on-surface-variant mt-0.5">
+                Form sudah terisi otomatis. Langsung klik <strong>&quot;Masuk&quot;</strong> untuk melanjutkan.
+              </p>
+            </div>
           </div>
 
           {/* Social login */}
@@ -247,12 +273,22 @@ export default function LoginPage() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              disabled={isLoading}
+              className="w-full bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
             >
-              Masuk
-              <span className="material-symbols-outlined text-[18px]">
-                arrow_forward
-              </span>
+              {isLoading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  Masuk
+                  <span className="material-symbols-outlined text-[18px]">
+                    arrow_forward
+                  </span>
+                </>
+              )}
             </button>
           </form>
 

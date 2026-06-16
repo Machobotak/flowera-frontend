@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 interface ProductCardProps {
@@ -24,7 +26,7 @@ export default function ProductCard({
   imageAlt,
 }: ProductCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow-soft overflow-hidden group hover:shadow-float transition-all cursor-pointer">
+    <a href="/products" className="block bg-white rounded-xl shadow-soft overflow-hidden group hover:shadow-float transition-all cursor-pointer">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden">
         <img
@@ -32,7 +34,10 @@ export default function ProductCard({
           alt={imageAlt}
           src={image}
         />
-        <button className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-md rounded-full text-error opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => e.preventDefault()}
+          className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-md rounded-full text-error opacity-0 group-hover:opacity-100 transition-opacity"
+        >
           <span className="material-symbols-outlined">favorite</span>
         </button>
       </div>
@@ -78,6 +83,6 @@ export default function ProductCard({
           <span>{sold}</span>
         </div>
       </div>
-    </div>
+    </a>
   );
 }
