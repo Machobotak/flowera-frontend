@@ -98,8 +98,11 @@ function StepIndicator({ step }: { step: number }) {
   const steps = [
     { label: "Pengiriman", icon: "local_shipping" },
     { label: "Pembayaran", icon: "payment" },
-    { label: "Konfirmasi", icon: "check_circle" },
+    { label: step >= 4 ? "Selesai" : "Konfirmasi", icon: "check_circle" },
   ];
+
+  // On step 4 (success), treat as all steps completed
+  const effectiveStep = step >= 4 ? 4 : step;
 
   return (
     <div className="flex items-center justify-center gap-0 mb-10">
@@ -108,12 +111,12 @@ function StepIndicator({ step }: { step: number }) {
           <div className="flex items-center gap-2">
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-bold transition-all ${
-                i + 1 <= step
+                i + 1 <= effectiveStep
                   ? "bg-primary text-white shadow-soft"
                   : "bg-surface-container-high text-on-surface-variant"
               }`}
             >
-              {i + 1 < step ? (
+              {i + 1 < effectiveStep ? (
                 <span className="material-symbols-outlined text-[18px]" style={FILL_STYLE}>check</span>
               ) : (
                 <span className="material-symbols-outlined text-[18px]">{s.icon}</span>
@@ -121,7 +124,7 @@ function StepIndicator({ step }: { step: number }) {
             </div>
             <span
               className={`text-[13px] font-semibold hidden sm:block ${
-                i + 1 <= step ? "text-primary" : "text-on-surface-variant"
+                i + 1 <= effectiveStep ? "text-primary" : "text-on-surface-variant"
               }`}
             >
               {s.label}
@@ -130,7 +133,7 @@ function StepIndicator({ step }: { step: number }) {
           {i < steps.length - 1 && (
             <div
               className={`w-12 sm:w-20 h-[2px] mx-2 rounded-full transition-all ${
-                i + 1 < step ? "bg-primary" : "bg-outline-variant/30"
+                i + 1 < effectiveStep ? "bg-primary" : "bg-outline-variant/30"
               }`}
             />
           )}
@@ -183,6 +186,7 @@ function OrderItemRow({ item }: { item: CheckoutItem }) {
 
 export default function CheckoutPage() {
   const [step, setStep] = useState(1);
+  const [isPaying, setIsPaying] = useState(false);
 
   // Shipping
   const [recipientName, setRecipientName] = useState("");
@@ -600,11 +604,151 @@ export default function CheckoutPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
+                  disabled={isPaying}
+                  onClick={() => {
+                    setIsPaying(true);
+                    setTimeout(() => {
+                      setIsPaying(false);
+                      setStep(4);
+                    }, 1500);
+                  }}
+                  className="flex-1 bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait disabled:hover:scale-100"
+                >
+                  {isPaying ? (
+                    <>
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Memproses Pembayaran...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">payment</span>
+                      Bayar Sekarang
+                    </>
+                  )}
+                </button>
+                <Link
+                  href="/"
+                  className="px-6 py-4 border border-outline-variant/40 rounded-xl font-body text-[14px] font-semibold text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-[0.98] text-center"
+                >
+                  Kembali ke Beranda
+                </Link>
+              </div>
+            </>
+          )}
+
+          {/* ═══ STEP 4: Payment Success ═══ */}
+          {step === 4 && (
+            <>
+              {/* Success banner */}
+              <div className="bg-gradient-to-br from-secondary/15 via-secondary-container/25 to-primary-container/15 rounded-2xl p-10 text-center border border-secondary/20 animate-[fadeIn_0.5s_ease] relative overflow-hidden">
+                {/* Decorative circles */}
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-secondary/5 rounded-full" />
+                <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-primary/5 rounded-full" />
+
+                <div className="relative z-10">
+                  <div className="w-24 h-24 rounded-full bg-secondary/15 flex items-center justify-center mx-auto mb-6 animate-[bounce_0.6s_ease]">
+                    <span className="material-symbols-outlined text-secondary text-[48px]" style={FILL_STYLE}>
+                      check_circle
+                    </span>
+                  </div>
+                  <h2 className="font-headline text-[28px] font-bold text-on-surface mb-2">
+                    Pembayaran Berhasil! 🎉
+                  </h2>
+                  <p className="text-on-surface-variant text-[15px] font-body max-w-md mx-auto mb-4">
+                    Terima kasih! Pesananmu sudah dikonfirmasi dan sedang diproses oleh florist.
+                  </p>
+                  <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-5 py-2.5 border border-secondary/20">
+                    <span className="material-symbols-outlined text-primary text-[16px]">receipt_long</span>
+                    <span className="text-[14px] font-bold text-primary">Order ID: #FG-20260615-8742</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment & Delivery Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Delivery info */}
+                <div className="bg-white rounded-xl border border-outline-variant/40 p-5 shadow-soft">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-primary text-[18px]">location_on</span>
+                    <span className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">Pengiriman</span>
+                  </div>
+                  <p className="text-[13px] font-semibold text-on-surface">{recipientName}</p>
+                  <p className="text-[12px] text-on-surface-variant mt-0.5">{recipientPhone}</p>
+                  <p className="text-[12px] text-on-surface-variant mt-1">{address}, {city} {postalCode}</p>
+                  <div className="mt-3 pt-3 border-t border-outline-variant/20 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-tertiary text-[16px]">
+                      {DELIVERY_SLOTS.find((s) => s.id === deliverySlot)?.icon}
+                    </span>
+                    <span className="text-[12px] text-on-surface-variant">
+                      {deliveryDate} · {DELIVERY_SLOTS.find((s) => s.id === deliverySlot)?.time}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Payment confirmation */}
+                <div className="bg-white rounded-xl border border-secondary/20 p-5 shadow-soft">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-secondary text-[18px]" style={FILL_STYLE}>check_circle</span>
+                    <span className="text-[12px] font-semibold text-secondary uppercase tracking-wider">Pembayaran Dikonfirmasi</span>
+                  </div>
+                  <p className="text-[13px] font-semibold text-on-surface">
+                    {PAYMENT_OPTIONS.find((p) => p.id === paymentMethod)?.name}
+                  </p>
+                  <p className="text-[12px] text-secondary mt-1 font-medium">Lunas</p>
+                  <div className="mt-3 pt-3 border-t border-outline-variant/20">
+                    <p className="text-[20px] font-bold text-primary">{formatRupiah(total)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="bg-white rounded-xl border border-outline-variant/40 p-6 shadow-soft">
+                <h3 className="font-body text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider mb-5">Status Pesanan</h3>
+                <div className="space-y-4">
+                  {[
+                    { icon: "check_circle", label: "Pesanan dikonfirmasi", time: "Baru saja", active: true },
+                    { icon: "payments", label: "Pembayaran diterima", time: "Baru saja", active: true },
+                    { icon: "local_florist", label: "Florist sedang merangkai", time: "Estimasi 2-3 jam", active: false },
+                    { icon: "local_shipping", label: "Dalam pengiriman", time: `${deliveryDate}`, active: false },
+                    { icon: "done_all", label: "Pesanan diterima", time: "-", active: false },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        item.active ? "bg-secondary/15" : "bg-surface-container"
+                      }`}>
+                        <span className={`material-symbols-outlined text-[16px] ${
+                          item.active ? "text-secondary" : "text-outline"
+                        }`} style={item.active ? FILL_STYLE : undefined}>
+                          {item.icon}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-[13px] font-semibold ${
+                          item.active ? "text-on-surface" : "text-on-surface-variant/50"
+                        }`}>{item.label}</p>
+                        <p className={`text-[11px] ${
+                          item.active ? "text-secondary font-medium" : "text-outline"
+                        }`}>{item.time}</p>
+                      </div>
+                      {item.active && (
+                        <span className="material-symbols-outlined text-secondary text-[16px]" style={FILL_STYLE}>
+                          check
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="/profile"
                   className="flex-1 bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">payment</span>
-                  Bayar Sekarang
-                </button>
+                  <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
+                  Lihat Pesanan Saya
+                </Link>
                 <Link
                   href="/"
                   className="px-6 py-4 border border-outline-variant/40 rounded-xl font-body text-[14px] font-semibold text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-[0.98] text-center"
