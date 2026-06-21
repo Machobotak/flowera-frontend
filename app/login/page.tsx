@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -24,7 +24,7 @@ const TESTIMONIALS = [
 
 /* ──────────────────────────── Page ──────────────────────────── */
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { login } = useAuth();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";
@@ -35,15 +35,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate a short login delay
-    setTimeout(() => {
-      login();
+    setError(null);
+    try {
+      await login(email, password);
       window.location.href = redirectTo;
-    }, 600);
+    } catch (err: any) {
+      setError(err.message || "Email atau password salah.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -160,6 +164,19 @@ export default function LoginPage() {
               </p>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-error-container/20 border border-error/20 rounded-xl px-4 py-3 flex items-start gap-3 text-error">
+              <span className="material-symbols-outlined text-error text-[20px] mt-0.5" style={FILL_STYLE}>
+                error
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-error">Gagal Masuk</p>
+                <p className="text-[12px] text-error-container mt-0.5">{error}</p>
+              </div>
+            </div>
+          )}
 
           {/* Social login */}
           <div className="space-y-3">
@@ -327,5 +344,17 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </main>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

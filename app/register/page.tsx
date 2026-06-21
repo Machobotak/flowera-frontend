@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
@@ -43,7 +45,11 @@ function getPasswordStrength(pw: string): { level: number; label: string; color:
 
 /* ──────────────────────────── Page ──────────────────────────── */
 
-export default function RegisterPage() {
+function RegisterPageContent() {
+  const { register } = useAuth();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -52,14 +58,25 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const passwordStrength = getPasswordStrength(password);
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
   const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle register logic
+    if (!agreeTerms || passwordsMismatch) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await register(name, email, password);
+      window.location.href = redirectTo;
+    } catch (err: any) {
+      setError(err.message || "Registrasi gagal. Silakan coba lagi.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -136,6 +153,19 @@ export default function RegisterPage() {
               Daftar gratis dan mulai kirim bunga untuk orang tersayang.
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-error-container/20 border border-error/20 rounded-xl px-4 py-3 flex items-start gap-3 text-error">
+              <span className="material-symbols-outlined text-error text-[20px] mt-0.5" style={FILL_STYLE}>
+                error
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-error">Gagal Daftar</p>
+                <p className="text-[12px] text-error-container mt-0.5">{error}</p>
+              </div>
+            </div>
+          )}
 
           {/* Social register */}
           <div className="space-y-3">
@@ -370,13 +400,22 @@ export default function RegisterPage() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={!agreeTerms || passwordsMismatch}
-              className="w-full bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-soft"
+              disabled={!agreeTerms || passwordsMismatch || isLoading}
+              className="w-full bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Buat Akun
-              <span className="material-symbols-outlined text-[18px]">
-                arrow_forward
-              </span>
+              {isLoading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  Buat Akun
+                  <span className="material-symbols-outlined text-[18px]">
+                    arrow_forward
+                  </span>
+                </>
+              )}
             </button>
           </form>
 
@@ -393,5 +432,17 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </main>
+    }>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

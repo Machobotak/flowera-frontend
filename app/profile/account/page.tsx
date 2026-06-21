@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -819,7 +819,7 @@ function PrivacyTab() {
 
 /* ──────────────────────────── Page ──────────────────────────── */
 
-export default function AccountPage() {
+function AccountPageContent() {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get("tab") as AccountTab | null;
   const validTabs: AccountTab[] = ["profile", "bank", "address", "password", "notification", "privacy"];
@@ -846,5 +846,17 @@ export default function AccountPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={
+      <main className="pt-8 pb-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </main>
+    }>
+      <AccountPageContent />
+    </Suspense>
   );
 }
