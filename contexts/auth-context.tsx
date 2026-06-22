@@ -3,6 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
+/* ──────────────────────────── Config ──────────────────────────── */
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 axios.defaults.withCredentials = true;
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -17,6 +21,7 @@ interface User {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  isLoading: boolean;
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
   register: (name: string, username: string, email: string, password: string) => Promise<void>;
@@ -25,29 +30,14 @@ interface AuthContextType {
 
 /* ──────────────────────────── Helper ──────────────────────────── */
 
-const getDisplayNameFromEmail = (email: string) => {
-  const prefix = email.split("@")[0];
-  return prefix
-    .split(/[._-]/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
-
-const ELEANOR_AVATAR =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD74GXDH79_rfkCVsJ-l1nXPVWlZUhIT1hqT9lB3b5djBCPy5Ypm0oxQfIbLe2O15468KR-YTyXqj01viOvQrvrYWCH_zRwMBjNcWI6tSat3K6XAVWCLRWj1yMq-Pi3JL9S9cWIvGMnKAjl4AjYQRVih9GT-ut6-AMprXZCT3wr6PGFJJFplmOcTHJe-xvqWZPbfWmKG_beX5_2s2yktjUiHaTT-lrfRiZK5pw4riXjfXq0_K0a9EfRhy_wVwCk_gJ0p1uHtXHQjCY";
-
-const buildUser = (name: string, email: string): User => {
-  const isEleanor = email.toLowerCase() === "eleanor.vance@email.com";
-  const avatar = isEleanor
-    ? ELEANOR_AVATAR
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1F4D2E&color=fff`;
-
+const buildUser = (data: { id?: number; name: string; email: string; avatar?: string; memberLabel?: string }): User => {
+  const avatar = data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=1F4D2E&color=fff`;
   return {
-    id: 0,
-    email,
-    name,
+    id: data.id || 0,
+    email: data.email,
+    name: data.name,
     avatar,
-    memberLabel: isEleanor ? "Premium Member" : "Member",
+    memberLabel: data.memberLabel || "Member",
   };
 };
 
@@ -55,6 +45,7 @@ const buildUser = (name: string, email: string): User => {
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
+  isLoading: true,
   user: null,
   login: async () => {},
   register: async () => {},
@@ -65,30 +56,52 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Read auth state from localStorage on mount
+  // Validate session on mount by calling the backend
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
+    const validateSession = async () => {
       try {
-        setUser(JSON.parse(savedUser));
+        const res = await axios.get(`${API_URL}/api/auth/me`);
+        if (res.data && res.data.user) {
+          const validatedUser = buildUser(res.data.user);
+          localStorage.setItem("user", JSON.stringify(validatedUser));
+          setUser(validatedUser);
+        } else {
+          // Server says no valid session — clear local state
+          localStorage.removeItem("user");
+          setUser(null);
+        }
       } catch {
-        localStorage.removeItem("user");
+        // Session invalid or server unreachable — fallback to localStorage cache
+        const savedUser = localStorage.getItem("user");
+        if (savedUser) {
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch {
+            localStorage.removeItem("user");
+          }
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setMounted(true);
+    };
+
+    validateSession();
   }, []);
 
   const login = useCallback(async (email?: string, password?: string) => {
     try {
-      await axios.post("http://localhost:3000/api/auth/login", {
+      const res = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password,
       });
 
-      const name = getDisplayNameFromEmail(email || "");
-      const newUser = buildUser(name, email || "");
+      // Use user data from server response if available
+      const userData = res.data?.user;
+      const newUser = userData
+        ? buildUser(userData)
+        : buildUser({ name: email?.split("@")[0] || "", email: email || "" });
 
       localStorage.setItem("user", JSON.stringify(newUser));
       setUser(newUser);
@@ -103,14 +116,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(async (name: string, username: string, email: string, password: string) => {
     try {
-      await axios.post("http://localhost:3000/api/auth/register", {
+      const res = await axios.post(`${API_URL}/api/auth/register`, {
         name,
         username,
         email,
         password,
       });
 
-      const newUser = buildUser(name, email);
+      // Use user data from server response if available
+      const userData = res.data?.user;
+      const newUser = userData ? buildUser(userData) : buildUser({ name, email });
 
       localStorage.setItem("user", JSON.stringify(newUser));
       setUser(newUser);
@@ -129,12 +144,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem("user");
     // Fire-and-forget logout request to clear server-side session/cookies
-    axios.post("http://localhost:3000/api/auth/logout").catch(() => {});
+    axios.post(`${API_URL}/api/auth/logout`).catch(() => {});
   }, []);
 
   const value: AuthContextType = {
-    isLoggedIn: mounted ? !!user : false,
-    user: mounted ? user : null,
+    isLoggedIn: !isLoading && !!user,
+    isLoading,
+    user: isLoading ? null : user,
     login,
     register,
     logout,
