@@ -19,7 +19,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -101,12 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, username: string, email: string, password: string) => {
     try {
-      const emailPrefix = email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const username = `${emailPrefix}_${randomSuffix}`;
-
       await axios.post("http://localhost:3000/api/auth/register", {
         name,
         username,

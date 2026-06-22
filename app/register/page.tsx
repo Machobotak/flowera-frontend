@@ -9,23 +9,6 @@ import { useAuth } from "@/contexts/auth-context";
 
 const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
 
-const FEATURES = [
-  {
-    icon: "local_florist",
-    title: "Bouquet Premium",
-    desc: "Akses ke koleksi buket eksklusif dari florist terbaik.",
-  },
-  {
-    icon: "local_shipping",
-    title: "Pengiriman Cepat",
-    desc: "Same-day delivery ke seluruh area Jakarta & sekitarnya.",
-  },
-  {
-    icon: "workspace_premium",
-    title: "Poin & Reward",
-    desc: "Kumpulkan poin di setiap pembelian untuk diskon spesial.",
-  },
-];
 
 /* ──────────────────────────── Password Strength ──────────────────────────── */
 
@@ -52,7 +35,7 @@ function RegisterPageContent() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -71,7 +54,7 @@ function RegisterPageContent() {
     setIsLoading(true);
     setError(null);
     try {
-      await register(name, email, password);
+      await register(name, username, email, password);
       window.location.href = redirectTo;
     } catch (err: any) {
       setError(err.message || "Registrasi gagal. Silakan coba lagi.");
@@ -80,69 +63,15 @@ function RegisterPageContent() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-80px)] flex">
-      {/* ── Left: Decorative Panel ── */}
-      <div className="hidden lg:flex lg:w-[480px] xl:w-[560px] flex-shrink-0 relative overflow-hidden">
-        {/* Background image */}
-        <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCq13s2kk1SI9h5iqcW6u_RJ7SPPBwAeyeCFkiAhvBgizv7pk0eGhQiqQ6i5ywdNa_It_aL4IMl0WZ9DvJ5hhFQx4HU3UQq6e2EIlfuTr6nVZ2l_VSECrQzQMdQkLbnNiSsfIiM5ToHikLAoxBnRn6RGa7TatYpmKZIttIt4ZqwprXn4KcC9FccEPsYgNmkBpgpH44sh9Y0PeF2qhBgvKIEIcvjbreH8uCpgSoVVLcLwh7tHiCx7xPG2Cnedgo2CkuWEYMABmzVVqA"
-          alt="Beautiful floral arrangement"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-secondary/20" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-10 h-full w-full">
-          {/* Top: Brand */}
-          <div>
-            <Link
-              href="/"
-              className="inline-block"
-            >
-              <img src="/logo-v1.png" alt="Flowera" />
-            </Link>
-            <p className="mt-2 text-white/70 text-[14px] font-body max-w-xs">
-              Bergabunglah dengan ribuan pecinta bunga dan temukan keindahan di setiap momen.
-            </p>
-          </div>
-
-          {/* Bottom: Features */}
-          <div className="space-y-4">
-            {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className="flex items-start gap-4 bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/10"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center flex-shrink-0">
-                  <span className="material-symbols-outlined text-primary-fixed text-[20px]" style={FILL_STYLE}>
-                    {feature.icon}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-white font-semibold text-[13px]">
-                    {feature.title}
-                  </p>
-                  <p className="text-white/60 text-[12px] leading-4 mt-0.5">
-                    {feature.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right: Register Form ── */}
-      <div className="flex-1 flex items-center justify-center px-6 py-10">
-        <div className="w-full max-w-[440px] space-y-7">
+    <main className="min-h-[calc(100vh-80px)] flex items-center justify-center px-6 py-10">
+      {/* ── Register Form ── */}
+      <div className="w-full max-w-[440px] space-y-7">
           {/* Header */}
-          <div className="text-center lg:text-left">
-            {/* Mobile brand */}
+          <div className="text-center">
+            {/* Brand */}
             <Link
               href="/"
-              className="lg:hidden inline-block mb-5"
+              className="inline-block mb-5"
             >
               <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
             </Link>
@@ -235,22 +164,23 @@ function RegisterPageContent() {
                 </div>
               </div>
 
-              {/* Phone */}
+              {/* Username */}
               <div className="space-y-1.5">
                 <label className="text-[13px] font-semibold text-on-surface block">
-                  No. Telepon
+                  Username
                 </label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px]">
-                    phone
+                    alternate_email
                   </span>
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="08xxxxxxxxxx"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                    placeholder="username_anda"
                     className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[14px] font-body text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     required
+                    minLength={3}
                   />
                 </div>
               </div>
@@ -429,7 +359,6 @@ function RegisterPageContent() {
               Masuk di sini
             </Link>
           </p>
-        </div>
       </div>
     </main>
   );
