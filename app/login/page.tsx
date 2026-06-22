@@ -30,8 +30,8 @@ function LoginPageContent() {
   const redirectTo = searchParams.get("redirect") || "/";
 
   // Auto-fill for prototype
-  const [email, setEmail] = useState("eleanor.vance@email.com");
-  const [password, setPassword] = useState("prototype123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +72,7 @@ function LoginPageContent() {
               href="/"
               className="inline-block"
             >
-              <img src="/logo-v1.png" alt="Flowera" className="h-8 w-auto brightness-0 invert" />
+              <img src="/logo-v1.png" alt="Flowera"/>
             </Link>
             <p className="mt-2 text-white/70 text-[14px] font-body max-w-xs">
               The world&apos;s most curated marketplace for meaningful floral gifts.
@@ -150,19 +150,6 @@ function LoginPageContent() {
             <p className="mt-2 text-on-surface-variant text-[14px] font-body">
               Masuk ke akun kamu untuk melanjutkan belanja bunga.
             </p>
-          </div>
-
-          {/* Prototype notice */}
-          <div className="bg-secondary/10 border border-secondary/20 rounded-xl px-4 py-3 flex items-start gap-3">
-            <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5" style={FILL_STYLE}>
-              info
-            </span>
-            <div>
-              <p className="text-[13px] font-semibold text-on-surface">Mode Prototype</p>
-              <p className="text-[12px] text-on-surface-variant mt-0.5">
-                Form sudah terisi otomatis. Langsung klik <strong>&quot;Masuk&quot;</strong> untuk melanjutkan.
-              </p>
-            </div>
           </div>
 
           {/* Error Message */}

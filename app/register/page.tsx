@@ -101,7 +101,7 @@ function RegisterPageContent() {
               href="/"
               className="inline-block"
             >
-              <img src="/logo-v1.png" alt="Flowera" className="h-8 w-auto brightness-0 invert" />
+              <img src="/logo-v1.png" alt="Flowera" />
             </Link>
             <p className="mt-2 text-white/70 text-[14px] font-body max-w-xs">
               Bergabunglah dengan ribuan pecinta bunga dan temukan keindahan di setiap momen.

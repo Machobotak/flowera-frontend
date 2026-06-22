@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
+axios.defaults.withCredentials = true;
+
 /* ──────────────────────────── Types ──────────────────────────── */
 
 interface User {
@@ -23,23 +25,6 @@ interface AuthContextType {
 
 /* ──────────────────────────── Helper ──────────────────────────── */
 
-const decodeJwt = (token: string) => {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      window
-        .atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
-};
-
 const getDisplayNameFromEmail = (email: string) => {
   const prefix = email.split("@")[0];
   return prefix
@@ -48,24 +33,20 @@ const getDisplayNameFromEmail = (email: string) => {
     .join(" ");
 };
 
-const getUserFromToken = (token: string): User | null => {
-  const decoded = decodeJwt(token);
-  if (!decoded || !decoded.email || !decoded.sub) return null;
+const ELEANOR_AVATAR =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuD74GXDH79_rfkCVsJ-l1nXPVWlZUhIT1hqT9lB3b5djBCPy5Ypm0oxQfIbLe2O15468KR-YTyXqj01viOvQrvrYWCH_zRwMBjNcWI6tSat3K6XAVWCLRWj1yMq-Pi3JL9S9cWIvGMnKAjl4AjYQRVih9GT-ut6-AMprXZCT3wr6PGFJJFplmOcTHJe-xvqWZPbfWmKG_beX5_2s2yktjUiHaTT-lrfRiZK5pw4riXjfXq0_K0a9EfRhy_wVwCk_gJ0p1uHtXHQjCY";
 
-  const email = decoded.email;
-  const name = getDisplayNameFromEmail(email);
-
-  // If it's Eleanor Vance, use the premium avatar and label for premium experience
+const buildUser = (name: string, email: string): User => {
   const isEleanor = email.toLowerCase() === "eleanor.vance@email.com";
   const avatar = isEleanor
-    ? "https://lh3.googleusercontent.com/aida-public/AB6AXuD74GXDH79_rfkCVsJ-l1nXPVWlZUhIT1hqT9lB3b5djBCPy5Ypm0oxQfIbLe2O15468KR-YTyXqj01viOvQrvrYWCH_zRwMBjNcWI6tSat3K6XAVWCLRWj1yMq-Pi3JL9S9cWIvGMnKAjl4AjYQRVih9GT-ut6-AMprXZCT3wr6PGFJJFplmOcTHJe-xvqWZPbfWmKG_beX5_2s2yktjUiHaTT-lrfRiZK5pw4riXjfXq0_K0a9EfRhy_wVwCk_gJ0p1uHtXHQjCY"
+    ? ELEANOR_AVATAR
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1F4D2E&color=fff`;
 
   return {
-    id: decoded.sub,
-    email: email,
-    name: name,
-    avatar: avatar,
+    id: 0,
+    email,
+    name,
+    avatar,
     memberLabel: isEleanor ? "Premium Member" : "Member",
   };
 };
@@ -88,14 +69,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Read auth state from localStorage on mount
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      const parsedUser = getUserFromToken(token);
-      if (parsedUser) {
-        setUser(parsedUser);
-      } else {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("user");
       }
     }
     setMounted(true);
@@ -103,22 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email?: string, password?: string) => {
     try {
-      const response = await axios.post("http://localhost:3000/auth/login", {
+      await axios.post("http://localhost:3000/api/auth/login", {
         email,
         password,
       });
 
-      const { accessToken, refreshToken } = response.data;
-      
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
+      const name = getDisplayNameFromEmail(email || "");
+      const newUser = buildUser(name, email || "");
 
-      const parsedUser = getUserFromToken(accessToken);
-      if (parsedUser) {
-        setUser(parsedUser);
-      } else {
-        throw new Error("Token payload tidak valid");
-      }
+      localStorage.setItem("user", JSON.stringify(newUser));
+      setUser(newUser);
     } catch (error: any) {
       // Propagate error to login page
       if (error.response && error.response.data && error.response.data.message) {
@@ -134,24 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
       const username = `${emailPrefix}_${randomSuffix}`;
 
-      const response = await axios.post("http://localhost:3000/auth/register", {
+      await axios.post("http://localhost:3000/api/auth/register", {
         name,
         username,
         email,
         password,
       });
 
-      const { accessToken, refreshToken } = response.data;
-      
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
+      const newUser = buildUser(name, email);
 
-      const parsedUser = getUserFromToken(accessToken);
-      if (parsedUser) {
-        setUser(parsedUser);
-      } else {
-        throw new Error("Token payload tidak valid");
-      }
+      localStorage.setItem("user", JSON.stringify(newUser));
+      setUser(newUser);
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.message) {
         const msg = Array.isArray(error.response.data.message)
@@ -165,8 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    // Fire-and-forget logout request to clear server-side session/cookies
+    axios.post("http://localhost:3000/api/auth/logout").catch(() => {});
   }, []);
 
   const value: AuthContextType = {
@@ -185,4 +152,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
-
