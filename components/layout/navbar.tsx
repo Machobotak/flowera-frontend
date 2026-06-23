@@ -47,6 +47,7 @@ export default function Navbar() {
     logout();
     window.location.href = "/";
   };
+  
 
   return (
     <>
@@ -58,7 +59,8 @@ export default function Navbar() {
             className="shrink-0"
             href="/"
           >
-            <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
+            {/* <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" /> */}
+            <img src="/logo-v1-transparant.png" alt="Flowera" className="h-7 w-auto" />
           </a>
 
           {/* Search Bar */}

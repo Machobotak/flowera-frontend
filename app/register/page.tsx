@@ -35,7 +35,7 @@ function RegisterPageContent() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -54,7 +54,7 @@ function RegisterPageContent() {
     setIsLoading(true);
     setError(null);
     try {
-      await register(name, username, email, password);
+      await register(name, phoneNumber, email, password);
       window.location.href = redirectTo;
     } catch (err: any) {
       setError(err.message || "Registrasi gagal. Silakan coba lagi.");
@@ -98,7 +98,7 @@ function RegisterPageContent() {
 
           {/* Social register */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-outline-variant/40 rounded-xl hover:bg-surface-container-high transition-all active:scale-[0.98] group">
+            <button onClick={() => {window.location.href = "http://localhost:3000/api/auth/google";}} className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-outline-variant/40 rounded-xl hover:bg-surface-container-high transition-all active:scale-[0.98] group">
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -115,7 +115,7 @@ function RegisterPageContent() {
           <div className="flex items-center gap-4">
             <hr className="flex-1 border-outline-variant/30" />
             <span className="text-[12px] text-on-surface-variant font-medium uppercase tracking-wider">
-              atau isi manual
+              Atau
             </span>
             <hr className="flex-1 border-outline-variant/30" />
           </div>
@@ -167,17 +167,17 @@ function RegisterPageContent() {
               {/* Username */}
               <div className="space-y-1.5">
                 <label className="text-[13px] font-semibold text-on-surface block">
-                  Username
+                  Phone Number
                 </label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px]">
-                    alternate_email
+                    phone_enabled
                   </span>
                   <input
                     type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
-                    placeholder="username_anda"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                    placeholder="Phone Number"
                     className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[14px] font-body text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     required
                     minLength={3}

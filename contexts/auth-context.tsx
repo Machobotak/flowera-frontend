@@ -24,20 +24,41 @@ interface AuthContextType {
   isLoading: boolean;
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
-  register: (name: string, username: string, email: string, password: string) => Promise<void>;
+  register: (name: string, phone_number: string, email: string, password: string) => Promise<void>;
+  googleLogin: () => void;
   logout: () => void;
 }
 
 /* ──────────────────────────── Helper ──────────────────────────── */
 
-const buildUser = (data: { id?: number; name: string; email: string; avatar?: string; memberLabel?: string }): User => {
-  const avatar = data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=1F4D2E&color=fff`;
+const buildUser = (
+  data?: {
+    id?: number;
+    name?: string;
+    email?: string;
+    avatar?: string;
+    memberLabel?: string;
+  }
+): User => {
+  if (!data) {
+    throw new Error(
+      "User data is missing"
+    );
+  }
+
+  const avatar =
+    data.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      data.name || "User"
+    )}&background=1F4D2E&color=fff`;
+
   return {
     id: data.id || 0,
-    email: data.email,
-    name: data.name,
+    email: data.email || "",
+    name: data.name || "",
     avatar,
-    memberLabel: data.memberLabel || "Member",
+    memberLabel:
+      data.memberLabel || "Member",
   };
 };
 
@@ -49,6 +70,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => {},
   register: async () => {},
+  googleLogin() {},
   logout: () => {},
 });
 
@@ -63,12 +85,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const validateSession = async () => {
       try {
         const res = await axios.get(`${API_URL}/api/auth/me`);
-        if (res.data && res.data.user) {
-          const validatedUser = buildUser(res.data.user);
-          localStorage.setItem("user", JSON.stringify(validatedUser));
+        if (res.data) {
+          const validatedUser = buildUser(res.data);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(validatedUser)
+          );
+
           setUser(validatedUser);
         } else {
-          // Server says no valid session — clear local state
           localStorage.removeItem("user");
           setUser(null);
         }
@@ -90,59 +116,120 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     validateSession();
   }, []);
 
-  const login = useCallback(async (email?: string, password?: string) => {
-    try {
-      const res = await axios.post(`${API_URL}/api/auth/login`, {
-        email,
-        password,
-      });
+  const handleGoogleLogin = () => {
+    window.location.href =
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`;
+  };
 
-      // Use user data from server response if available
-      const userData = res.data?.user;
-      const newUser = userData
-        ? buildUser(userData)
-        : buildUser({ name: email?.split("@")[0] || "", email: email || "" });
+  const login = useCallback(
+    async (email?: string, password?: string) => {
+      try {
+        const res = await axios.post(
+          `${API_URL}/api/auth/login`,
+          {
+            email,
+            password,
+          }
+        );
 
-      localStorage.setItem("user", JSON.stringify(newUser));
-      setUser(newUser);
-    } catch (error: any) {
-      // Propagate error to login page
-      if (error.response && error.response.data && error.response.data.message) {
-        throw new Error(error.response.data.message);
+        localStorage.setItem(
+          "accessToken",
+          res.data.accessToken
+        );
+
+        localStorage.setItem(
+          "refreshToken",
+          res.data.refreshToken
+        );
+
+        const me = await axios.get(
+          `${API_URL}/api/auth/me`
+        );
+
+
+        const newUser = buildUser(
+          me.data
+        );
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(newUser)
+        );
+
+        setUser(newUser);
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          "Login failed";
+
+        throw new Error(message);
       }
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
 
-  const register = useCallback(async (name: string, username: string, email: string, password: string) => {
-    try {
-      const res = await axios.post(`${API_URL}/api/auth/register`, {
-        name,
-        username,
-        email,
-        password,
-      });
 
-      // Use user data from server response if available
-      const userData = res.data?.user;
-      const newUser = userData ? buildUser(userData) : buildUser({ name, email });
+  const register = useCallback(
+    async (
+      name: string,
+      phone_number: string,
+      email: string,
+      password: string
+    ) => {
+      try {
+        const res = await axios.post(
+          `${API_URL}/api/auth/register`,
+          {
+            name,
+            phone_number,
+            email,
+            password,
+          }
+        );
 
-      localStorage.setItem("user", JSON.stringify(newUser));
-      setUser(newUser);
-    } catch (error: any) {
-      if (error.response && error.response.data && error.response.data.message) {
-        const msg = Array.isArray(error.response.data.message)
-          ? error.response.data.message.join(", ")
-          : error.response.data.message;
-        throw new Error(msg);
+        localStorage.setItem(
+          "accessToken",
+          res.data.accessToken
+        );
+
+        localStorage.setItem(
+          "refreshToken",
+          res.data.refreshToken
+        );
+
+        const me = await axios.get(
+          `${API_URL}/api/auth/me`
+        );
+
+
+        const newUser = buildUser(
+          me.data
+        );
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(newUser)
+        );
+
+        setUser(newUser);
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          "Registration failed";
+
+        throw new Error(message);
       }
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     // Fire-and-forget logout request to clear server-side session/cookies
     axios.post(`${API_URL}/api/auth/logout`).catch(() => {});
   }, []);
@@ -153,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: isLoading ? null : user,
     login,
     register,
+    googleLogin: handleGoogleLogin,
     logout,
   };
 

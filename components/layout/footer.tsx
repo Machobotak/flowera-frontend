@@ -24,9 +24,10 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-1 space-y-4">
             <a href="/">
-              <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
+              {/* <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" /> */}
+              <img src="/logo-v1-transparant.png" alt="Flowera" className="h-7 w-auto" />
             </a>
-            <p className="font-body-md text-on-surface-variant">
+            <p className="font-body-md text-on-surface-variant pt-5">
               The world&apos;s most curated marketplace for meaningful floral
               gifts and botanical wonders.
             </p>
