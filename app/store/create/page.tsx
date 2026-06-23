@@ -68,7 +68,7 @@ export default function CreateStorePage() {
       const fetchCities = async () => {
         setIsLoadingRegions(prev => ({ ...prev, cities: true }));
         try {
-          const API_CITY = `${process.env.NEXT_PUBLIC_REGIONAL_API}/api/regencies/${formData.provinceId}`; 
+          const API_CITY = `${process.env.NEXT_PUBLIC_REGIONAL_API}/api/cities/${formData.provinceId}`; 
           if (!API_CITY) return;
 
           const response = await fetch(API_CITY);
@@ -154,37 +154,42 @@ export default function CreateStorePage() {
     const payload = {
       name: formData.name,
       address: fullAddress,
-      city: formData.cityName,
+      type: "TOKO",
       description: formData.description,
+      city: formData.cityName,
     };
 
     console.log("Submitting store data:", payload);
 
     try {
       // Endpoint API pembuatan toko
-      const API_URL = ""; 
+      const API_URL = process.env.NEXT_PUBLIC_API_URL+"/api/seller/store/create"; 
       
       if (!API_URL) {
         setTimeout(() => {
           setIsSubmitting(false);
-          router.push("/profile");
+          window.location.href = "/store";
         }, 1500);
         return;
       }
 
       const response = await fetch(API_URL, {
-        method: "POST",
+        method: "POST", 
         headers: {
           "Content-Type": "application/json",
+          
         },
         body: JSON.stringify(payload),
+        credentials: "include"
       });
 
       if (!response.ok) {
         throw new Error("Gagal mengirim data pembuatan toko");
       }
 
-      router.push("/profile");
+      // Menggunakan window.location.href agar halaman termuat ulang 
+      // dan AuthContext mengambil data user terbaru yang sudah memiliki role 'seller'
+      window.location.href = "/store";
     } catch (error) {
       console.error("Terjadi kesalahan:", error);
       alert("Gagal membuat toko. Silakan coba lagi.");

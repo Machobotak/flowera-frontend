@@ -17,6 +17,7 @@ interface User {
   name: string;
   avatar: string;
   memberLabel?: string;
+  roles: string[];
 }
 
 interface AuthContextType {
@@ -38,6 +39,7 @@ const buildUser = (
     email?: string;
     avatar?: string;
     memberLabel?: string;
+    roles?: string[];
   }
 ): User => {
   if (!data) {
@@ -59,6 +61,7 @@ const buildUser = (
     avatar,
     memberLabel:
       data.memberLabel || "Member",
+    roles: data.roles || ["user"],
   };
 };
 
