@@ -47,6 +47,8 @@ export default function Navbar() {
     logout();
     window.location.href = "/";
   };
+
+  const firstName = user?.name?.trim().split(" ")[0] || "";
   
 
   return (
@@ -110,7 +112,8 @@ export default function Navbar() {
                   </div>
                   <div className="hidden lg:block text-left">
                     <p className="text-[13px] font-semibold text-on-surface leading-4">
-                      {user.name}
+                      {/* {user.name} */}
+                      {firstName}
                     </p>
                     {user.memberLabel && (
                       <p className="text-[10px] text-on-surface-variant">
