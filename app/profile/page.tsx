@@ -158,9 +158,13 @@ function ProfileSidebar() {
         </div>
         <h2 className="font-headline text-[22px] font-semibold text-on-surface mb-0.5">{USER.name}</h2>
         <p className="text-[14px] text-on-surface-variant mb-1">{USER.label}</p>
-        <a href="/profile/account" className="text-[12px] text-primary font-semibold hover:underline mb-6 flex items-center gap-1">
+        <a href="/profile/account" className="text-[12px] text-primary font-semibold hover:underline mb-4 flex items-center gap-1">
           <span className="material-symbols-outlined text-[14px]">edit</span>
           Ubah Profil
+        </a>
+        <a href="/store/create" className="w-full py-2.5 bg-secondary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 flex items-center justify-center gap-2 mb-6">
+          <span className="material-symbols-outlined text-[18px]">storefront</span>
+          Buat Toko
         </a>
 
         {/* Nav links */}

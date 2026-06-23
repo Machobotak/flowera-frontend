@@ -134,6 +134,18 @@ export default function Navbar() {
                       )}
                     </div>
 
+                    {/* Buat Toko Button */}
+                    <div className="p-2 border-b border-outline-variant/20">
+                      <a
+                        href="/store/create"
+                        className="flex items-center justify-center gap-2 w-full py-2 bg-secondary text-white rounded-lg text-[13px] font-semibold hover:shadow-soft transition-all active:scale-95"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">storefront</span>
+                        Buat Toko
+                      </a>
+                    </div>
+
                     {/* Menu items */}
                     <div className="py-1">
                       {USER_MENU_ITEMS.map((item) => (
