@@ -9,18 +9,6 @@ import { useAuth } from "@/contexts/auth-context";
 
 const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
 
-const TESTIMONIALS = [
-  {
-    text: "Flowera mengubah cara saya mengirim bunga. Selalu segar dan indah!",
-    author: "Sarah K.",
-    role: "Pelanggan Setia",
-  },
-  {
-    text: "Florist terbaik di Jakarta. Pengiriman cepat dan bouquet-nya selalu sempurna.",
-    author: "Andi M.",
-    role: "Corporate Client",
-  },
-];
 
 /* ──────────────────────────── Page ──────────────────────────── */
 
@@ -30,8 +18,8 @@ function LoginPageContent() {
   const redirectTo = searchParams.get("redirect") || "/";
 
   // Auto-fill for prototype
-  const [email, setEmail] = useState("eleanor.vance@email.com");
-  const [password, setPassword] = useState("prototype123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,17 +39,15 @@ function LoginPageContent() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-80px)] flex">
-      {/* ── Left: Decorative Panel ── */}
-      {/* ── Right: Login Form ── */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[420px] space-y-8">
+    <main className="min-h-[calc(100vh-80px)] flex items-center justify-center px-6 py-12">
+      {/* ── Login Form ── */}
+      <div className="w-full max-w-[420px] space-y-8">
           {/* Header */}
-          <div className="text-center lg:text-left">
-            {/* Mobile brand */}
+          <div className="text-center">
+            {/* Brand */}
             <Link
               href="/"
-              className="lg:hidden inline-block mb-6"
+              className="inline-block mb-6"
             >
               <img src="/logo-v1.png" alt="Flowera" className="h-7 w-auto" />
             </Link>
@@ -72,19 +58,6 @@ function LoginPageContent() {
               Masuk ke akun kamu untuk melanjutkan belanja bunga.
             </p>
           </div>
-
-          {/* Prototype notice */}
-          {/* <div className="bg-secondary/10 border border-secondary/20 rounded-xl px-4 py-3 flex items-start gap-3">
-            <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5" style={FILL_STYLE}>
-              info
-            </span>
-            <div>
-              <p className="text-[13px] font-semibold text-on-surface">Mode Prototype</p>
-              <p className="text-[12px] text-on-surface-variant mt-0.5">
-                Form sudah terisi otomatis. Langsung klik <strong>&quot;Masuk&quot;</strong> untuk melanjutkan.
-              </p>
-            </div>
-          </div> */}
 
           {/* Error Message */}
           {error && (
@@ -101,7 +74,7 @@ function LoginPageContent() {
 
           {/* Social login */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-outline-variant/40 rounded-xl hover:bg-surface-container-high transition-all active:scale-[0.98] group">
+            <button onClick={() => {window.location.href = "http://localhost:3000/api/auth/google";}} className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-outline-variant/40 rounded-xl hover:bg-surface-container-high transition-all active:scale-[0.98] group">
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -262,7 +235,6 @@ function LoginPageContent() {
               SSL Secured
             </span>
           </div>
-        </div>
       </div>
     </main>
   );

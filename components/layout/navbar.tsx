@@ -47,6 +47,7 @@ export default function Navbar() {
     logout();
     window.location.href = "/";
   };
+  
 
   return (
     <>

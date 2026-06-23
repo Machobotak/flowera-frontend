@@ -3,6 +3,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
+/* ──────────────────────────── Config ──────────────────────────── */
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+axios.defaults.withCredentials = true;
+
 /* ──────────────────────────── Types ──────────────────────────── */
 
 interface User {
@@ -15,58 +21,44 @@ interface User {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  isLoading: boolean;
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, phone_number: string, email: string, password: string) => Promise<void>;
+  googleLogin: () => void;
   logout: () => void;
 }
 
 /* ──────────────────────────── Helper ──────────────────────────── */
 
-const decodeJwt = (token: string) => {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      window
-        .atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
+const buildUser = (
+  data?: {
+    id?: number;
+    name?: string;
+    email?: string;
+    avatar?: string;
+    memberLabel?: string;
   }
-};
+): User => {
+  if (!data) {
+    throw new Error(
+      "User data is missing"
+    );
+  }
 
-const getDisplayNameFromEmail = (email: string) => {
-  const prefix = email.split("@")[0];
-  return prefix
-    .split(/[._-]/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
-
-const getUserFromToken = (token: string): User | null => {
-  const decoded = decodeJwt(token);
-  if (!decoded || !decoded.email || !decoded.sub) return null;
-
-  const email = decoded.email;
-  const name = getDisplayNameFromEmail(email);
-
-  // If it's Eleanor Vance, use the premium avatar and label for premium experience
-  const isEleanor = email.toLowerCase() === "eleanor.vance@email.com";
-  const avatar = isEleanor
-    ? "https://lh3.googleusercontent.com/aida-public/AB6AXuD74GXDH79_rfkCVsJ-l1nXPVWlZUhIT1hqT9lB3b5djBCPy5Ypm0oxQfIbLe2O15468KR-YTyXqj01viOvQrvrYWCH_zRwMBjNcWI6tSat3K6XAVWCLRWj1yMq-Pi3JL9S9cWIvGMnKAjl4AjYQRVih9GT-ut6-AMprXZCT3wr6PGFJJFplmOcTHJe-xvqWZPbfWmKG_beX5_2s2yktjUiHaTT-lrfRiZK5pw4riXjfXq0_K0a9EfRhy_wVwCk_gJ0p1uHtXHQjCY"
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1F4D2E&color=fff`;
+  const avatar =
+    data.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      data.name || "User"
+    )}&background=1F4D2E&color=fff`;
 
   return {
-    id: decoded.sub,
-    email: email,
-    name: name,
-    avatar: avatar,
-    memberLabel: isEleanor ? "Premium Member" : "Member",
+    id: data.id || 0,
+    email: data.email || "",
+    name: data.name || "",
+    avatar,
+    memberLabel:
+      data.memberLabel || "Member",
   };
 };
 
@@ -74,9 +66,11 @@ const getUserFromToken = (token: string): User | null => {
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
+  isLoading: true,
   user: null,
   login: async () => {},
   register: async () => {},
+  googleLogin() {},
   logout: () => {},
 });
 
@@ -84,96 +78,169 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Read auth state from localStorage on mount
+  // Validate session on mount by calling the backend
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      const parsedUser = getUserFromToken(token);
-      if (parsedUser) {
-        setUser(parsedUser);
-      } else {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+    const validateSession = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/auth/me`);
+        if (res.data) {
+          const validatedUser = buildUser(res.data);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(validatedUser)
+          );
+
+          setUser(validatedUser);
+        } else {
+          localStorage.removeItem("user");
+          setUser(null);
+        }
+      } catch {
+        // Session invalid or server unreachable — fallback to localStorage cache
+        const savedUser = localStorage.getItem("user");
+        if (savedUser) {
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch {
+            localStorage.removeItem("user");
+          }
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setMounted(true);
+    };
+
+    validateSession();
   }, []);
 
-  const login = useCallback(async (email?: string, password?: string) => {
-    try {
-      const response = await axios.post("http://localhost:3000/auth/login", {
-        email,
-        password,
-      });
+  const handleGoogleLogin = () => {
+    window.location.href =
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`;
+  };
 
-      const { accessToken, refreshToken } = response.data;
-      
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
+  const login = useCallback(
+    async (email?: string, password?: string) => {
+      try {
+        const res = await axios.post(
+          `${API_URL}/api/auth/login`,
+          {
+            email,
+            password,
+          }
+        );
 
-      const parsedUser = getUserFromToken(accessToken);
-      if (parsedUser) {
-        setUser(parsedUser);
-      } else {
-        throw new Error("Token payload tidak valid");
+        localStorage.setItem(
+          "accessToken",
+          res.data.accessToken
+        );
+
+        localStorage.setItem(
+          "refreshToken",
+          res.data.refreshToken
+        );
+
+        const me = await axios.get(
+          `${API_URL}/api/auth/me`
+        );
+
+
+        const newUser = buildUser(
+          me.data
+        );
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(newUser)
+        );
+
+        setUser(newUser);
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          "Login failed";
+
+        throw new Error(message);
       }
-    } catch (error: any) {
-      // Propagate error to login page
-      if (error.response && error.response.data && error.response.data.message) {
-        throw new Error(error.response.data.message);
+    },
+    []
+  );
+
+
+  const register = useCallback(
+    async (
+      name: string,
+      phone_number: string,
+      email: string,
+      password: string
+    ) => {
+      try {
+        const res = await axios.post(
+          `${API_URL}/api/auth/register`,
+          {
+            name,
+            phone_number,
+            email,
+            password,
+          }
+        );
+
+        localStorage.setItem(
+          "accessToken",
+          res.data.accessToken
+        );
+
+        localStorage.setItem(
+          "refreshToken",
+          res.data.refreshToken
+        );
+
+        const me = await axios.get(
+          `${API_URL}/api/auth/me`
+        );
+
+
+        const newUser = buildUser(
+          me.data
+        );
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(newUser)
+        );
+
+        setUser(newUser);
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          "Registration failed";
+
+        throw new Error(message);
       }
-      throw error;
-    }
-  }, []);
-
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    try {
-      const emailPrefix = email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const username = `${emailPrefix}_${randomSuffix}`;
-
-      const response = await axios.post("http://localhost:3000/auth/register", {
-        name,
-        username,
-        email,
-        password,
-      });
-
-      const { accessToken, refreshToken } = response.data;
-      
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-
-      const parsedUser = getUserFromToken(accessToken);
-      if (parsedUser) {
-        setUser(parsedUser);
-      } else {
-        throw new Error("Token payload tidak valid");
-      }
-    } catch (error: any) {
-      if (error.response && error.response.data && error.response.data.message) {
-        const msg = Array.isArray(error.response.data.message)
-          ? error.response.data.message.join(", ")
-          : error.response.data.message;
-        throw new Error(msg);
-      }
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     setUser(null);
+    localStorage.removeItem("user");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    // Fire-and-forget logout request to clear server-side session/cookies
+    axios.post(`${API_URL}/api/auth/logout`).catch(() => {});
   }, []);
 
   const value: AuthContextType = {
-    isLoggedIn: mounted ? !!user : false,
-    user: mounted ? user : null,
+    isLoggedIn: !isLoading && !!user,
+    isLoading,
+    user: isLoading ? null : user,
     login,
     register,
+    googleLogin: handleGoogleLogin,
     logout,
   };
 
@@ -185,4 +252,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
-
