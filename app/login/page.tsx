@@ -53,85 +53,6 @@ function LoginPageContent() {
   return (
     <main className="min-h-[calc(100vh-80px)] flex">
       {/* ── Left: Decorative Panel ── */}
-      <div className="hidden lg:flex lg:w-[480px] xl:w-[560px] flex-shrink-0 relative overflow-hidden">
-        {/* Background image */}
-        <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHU-MNzSwSUbbUPvKZvCkAJnjjr1Q74pczA_BThQ1vmUXiAhigqFmfVM6UJBm6PKYLM6lwwR3NMrcTTLt9dYI6OdgW0NKTbW4t9TA8qu-ZUJaBia7VZ6ym3L57bQlqRQnEc0s2CL8xzuJjMzuFph9CXFRr3tv-TDqJl2Ju2inAm_6q0EVgsVwlto2C5UtHP0eocusr5WBn4VLNDYxwoz6p-itwOP7TBGSVeE-XuAy14jdF2ULjhxN4qEUGFGCz-m7liS_ZWUqg-1Y"
-          alt="Premium bouquet arrangement"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-primary/20" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-10 h-full w-full">
-          {/* Top: Brand */}
-          <div>
-            <Link
-              href="/"
-              className="inline-block"
-            >
-              <img src="/logo-v1.png" alt="Flowera" className="h-8 w-auto brightness-0 invert" />
-            </Link>
-            <p className="mt-2 text-white/70 text-[14px] font-body max-w-xs">
-              The world&apos;s most curated marketplace for meaningful floral gifts.
-            </p>
-          </div>
-
-          {/* Bottom: Testimonial */}
-          <div className="space-y-6">
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-              <div className="flex gap-1 mb-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="material-symbols-outlined text-tertiary-fixed text-[16px]"
-                    style={FILL_STYLE}
-                  >
-                    star
-                  </span>
-                ))}
-              </div>
-              <p className="text-white/90 text-[14px] leading-6 italic font-body">
-                &ldquo;{TESTIMONIALS[0].text}&rdquo;
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center">
-                  <span className="text-on-primary-container font-bold text-[13px]">
-                    {TESTIMONIALS[0].author[0]}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-white text-[13px] font-semibold">
-                    {TESTIMONIALS[0].author}
-                  </p>
-                  <p className="text-white/50 text-[11px]">
-                    {TESTIMONIALS[0].role}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="flex gap-8">
-              <div>
-                <p className="text-white font-bold text-[22px] font-headline">10K+</p>
-                <p className="text-white/50 text-[11px]">Pelanggan Puas</p>
-              </div>
-              <div>
-                <p className="text-white font-bold text-[22px] font-headline">500+</p>
-                <p className="text-white/50 text-[11px]">Florist Partner</p>
-              </div>
-              <div>
-                <p className="text-white font-bold text-[22px] font-headline">4.9</p>
-                <p className="text-white/50 text-[11px]">Rating Rata-rata</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ── Right: Login Form ── */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
@@ -153,7 +74,7 @@ function LoginPageContent() {
           </div>
 
           {/* Prototype notice */}
-          <div className="bg-secondary/10 border border-secondary/20 rounded-xl px-4 py-3 flex items-start gap-3">
+          {/* <div className="bg-secondary/10 border border-secondary/20 rounded-xl px-4 py-3 flex items-start gap-3">
             <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5" style={FILL_STYLE}>
               info
             </span>
@@ -163,7 +84,7 @@ function LoginPageContent() {
                 Form sudah terisi otomatis. Langsung klik <strong>&quot;Masuk&quot;</strong> untuk melanjutkan.
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* Error Message */}
           {error && (
