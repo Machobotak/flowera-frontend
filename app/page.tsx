@@ -1,4 +1,7 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import ProductCard from "@/components/cards/product-card";
 import FloristCard from "@/components/cards/florist-card";
 
@@ -214,57 +217,112 @@ function CategoryChips() {
   );
 }
 
-function TrendingBouquets() {
+function ExploreSection() {
+  const [activeTab, setActiveTab] = useState<"products" | "florists">("products");
+
+  // State untuk menyimpan data dari backend
+  const [products, setProducts] = useState<any[]>([]);
+  const [florists, setFlorists] = useState<any[]>([]);
+
+  useEffect(() => {
+    // TODO: Isi URL endpoint backend Anda di sini
+    const fetchHomeData = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL+"/api/user/home";
+        const res = await axios.get(API_URL);
+        
+        // Gunakan data dari endpoint backend
+        const data = res.data;
+
+        setProducts(data.product || []);
+        setFlorists(data.store || []);
+      } catch (error) {
+        console.error("Gagal mengambil data home:", error);
+      }
+    };
+
+    fetchHomeData();
+  }, []);
+
+  const getImageUrl = (path: string | null) => {
+    if (!path) return "https://ui-avatars.com/api/?name=Image&background=random";
+    if (path.startsWith("http")) return path;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    return `${API_URL}${path}`;
+  };
+
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-4">
-          <h3 className="font-headline-md text-headline-md">
+      {/* Header & Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex gap-2 p-1 bg-surface-container-low rounded-xl w-fit border border-outline-variant/20">
+          <button
+            onClick={() => setActiveTab("products")}
+            className={`px-6 py-2.5 rounded-lg text-[14px] font-semibold transition-all ${
+              activeTab === "products"
+                ? "bg-white text-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
             Trending Bouquets
-          </h3>
-          <span className="text-on-surface-variant font-body-md">
-            Hand-picked by our editors
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2 border border-outline-variant/30 rounded-full hover:bg-surface-container-high">
-            <span className="material-symbols-outlined">chevron_left</span>
           </button>
-          <button className="p-2 border border-outline-variant/30 rounded-full hover:bg-surface-container-high">
-            <span className="material-symbols-outlined">chevron_right</span>
+          <button
+            onClick={() => setActiveTab("florists")}
+            className={`px-6 py-2.5 rounded-lg text-[14px] font-semibold transition-all ${
+              activeTab === "florists"
+                ? "bg-white text-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
+            Nearby Florists
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-        {PRODUCTS.map((product) => (
-          <ProductCard key={product.name} {...product} />
-        ))}
+      {/* Content */}
+      <div className="animate-[fadeIn_0.3s_ease]">
+        {activeTab === "products" ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {products.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                name={product.name}
+                florist={product.store?.name || "Unknown Florist"}
+                price={`Rp ${product.price.toLocaleString("id-ID")}`}
+                rating={product.rating > 0 ? product.rating.toString() : "Baru"}
+                location={product.store?.city || "Unknown"}
+                sold="0 terjual"
+                image={getImageUrl(product.store?.logo)}
+                imageAlt={product.name}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {florists.map((florist) => (
+              <FloristCard 
+                key={florist.id} 
+                name={florist.name}
+                location={florist.city || "Unknown City"}
+                distance="Dekat Anda"
+                avatar={getImageUrl(florist.logo)}
+                avatarAlt={florist.name}
+                thumbnails={[
+                  { src: "https://ui-avatars.com/api/?name=1&background=random", alt: "thumb 1" },
+                  { src: "https://ui-avatars.com/api/?name=2&background=random", alt: "thumb 2" },
+                  { src: "https://ui-avatars.com/api/?name=3&background=random", alt: "thumb 3" }
+                ]}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </section>
-  );
-}
 
-function NearbyFlorists() {
-  return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-headline-md text-headline-md">Nearby Florists</h3>
-        <a
-          className="text-primary font-label-md hover:underline flex items-center gap-1"
-          href="#"
-        >
-          See More
-          <span className="material-symbols-outlined text-[18px]">
-            arrow_forward
-          </span>
-        </a>
-      </div>
-
-      <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4">
-        {FLORISTS.map((florist) => (
-          <FloristCard key={florist.name} {...florist} />
-        ))}
+      {/* Load More Indicator */}
+      <div className="flex justify-center pt-8 pb-4">
+        <button className="px-8 py-3 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary-container/20 transition-colors">
+          Muat Lebih Banyak
+        </button>
       </div>
     </section>
   );
@@ -277,8 +335,7 @@ export default function Home() {
     <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
       <HeroCarousel />
       <CategoryChips />
-      <TrendingBouquets />
-      <NearbyFlorists />
+      <ExploreSection />
     </main>
   );
 }
