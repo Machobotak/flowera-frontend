@@ -381,11 +381,14 @@ function ExploreSection() {
       </div>
 
       {/* Load More Indicator */}
-      <div className="flex justify-center pt-8 pb-4">
-        <button className="px-8 py-3 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary-container/20 transition-colors">
-          Muat Lebih Banyak
-        </button>
-      </div>
+      {((activeTab === "products" && filteredProducts.length >= 50) || 
+        (activeTab === "florists" && florists.length >= 50)) && (
+        <div className="flex justify-center pt-8 pb-4">
+          <button className="px-8 py-3 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary-container/20 transition-colors">
+            Muat Lebih Banyak
+          </button>
+        </div>
+      )}
     </section>
   );
 }
