@@ -49,7 +49,6 @@ export default function CreateStorePage() {
 
         const response = await fetch(API_PROVINCE);
         const res = await response.json();
-        console.log(res);
         
         // Sesuaikan dengan struktur data response (mengambil properti data)
         setProvinces(res.data || []);
