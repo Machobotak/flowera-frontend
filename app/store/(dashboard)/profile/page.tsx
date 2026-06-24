@@ -23,31 +23,10 @@ export default function StoreProfilePage() {
     const fetchStoreProfile = async () => {
       try {
         setIsLoading(true);
-        // const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-        // const res = await axios.get(`${API_URL}/api/seller/store/detail`, { withCredentials: true });
+        const API_URL = process.env.NEXT_PUBLIC_API_URL;
+        const res = await axios.get(`${API_URL}/api/seller/store/detail`, { withCredentials: true });
         
-        // Mock data from user
-        const mockResponse = {
-          "status": "success",
-          "data": {
-            "id": 4,
-            "name": "VW Florist",
-            "slug": "vw-florist",
-            "logo": "/uploads/stores/1782137598218.png",
-            "address": "Jalan Sumbersekar",
-            "type": "MALL",
-            "description": "Jual bunga asli",
-            "rating": 0,
-            "city": "Malang",
-            "dateOnlineLast": null,
-            "createdAt": "2026-06-21T11:32:39.797Z",
-            "updatedAt": "2026-06-22T14:13:18.659Z",
-            "deletedAt": null
-          }
-        };
-
-        const data = mockResponse.data;
-        // const data = res.data.data;
+        const data = res.data.data;
 
         setStoreData(data);
         setFormData({
