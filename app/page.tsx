@@ -225,43 +225,12 @@ function HeroCarousel() {
   );
 }
 
-function CategoryChips() {
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h4 className="font-headline-md text-headline-md">
-          Belanja Sesuai Kebutuhan
-        </h4>
-        <a className="text-primary font-label-md hover:underline" href="#">
-          Lihat Semua
-        </a>
-      </div>
-
-      <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.label}
-            className="flex items-center gap-3 px-6 py-3 bg-surface border border-outline-variant/30 rounded-full whitespace-nowrap hover:bg-primary-container/10 transition-colors"
-          >
-            <span className="material-symbols-outlined text-primary">
-              {cat.icon}
-            </span>
-            <span className="font-label-md">{cat.label}</span>
-          </button>
-        ))}
-        <button className="flex items-center gap-3 px-6 py-3 bg-primary text-white rounded-full whitespace-nowrap hover:opacity-90 transition-colors">
-          <span className="material-symbols-outlined">brush</span>
-          <span className="font-label-md">Custom Bouquet</span>
-        </button>
-      </div>
-    </section>
-  );
-}
-
 function ExploreSection() {
   const [activeTab, setActiveTab] = useState<"products" | "florists">("products");
 
   // State untuk menyimpan data dari backend
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [florists, setFlorists] = useState<any[]>([]);
 
@@ -275,6 +244,7 @@ function ExploreSection() {
         // Gunakan data dari endpoint backend
         const data = res.data;
 
+        setCategories(data.productCategories || []);
         setProducts(data.product || []);
         setFlorists(data.store || []);
       } catch (error) {
@@ -292,8 +262,56 @@ function ExploreSection() {
     return `${API_URL}${path}`;
   };
 
+  const filteredProducts = selectedCategory
+    ? products.filter((p) => p.categoryId === selectedCategory || p.productCategoryId === selectedCategory || (p.categories && p.categories.some((c: any) => c.id === selectedCategory)))
+    : products;
+
   return (
     <section className="space-y-6">
+      {/* Category Chips - Only for products */}
+      {activeTab === "products" && (
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex items-center justify-between">
+            <h4 className="font-headline-md text-headline-md">
+              Belanja Sesuai Kebutuhan
+            </h4>
+            <a className="text-primary font-label-md hover:underline" href="#">
+              Lihat Semua
+            </a>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`flex items-center gap-3 px-6 py-3 rounded-full whitespace-nowrap transition-colors border ${
+                selectedCategory === null
+                  ? "bg-primary text-white border-primary"
+                  : "bg-surface border-outline-variant/30 text-on-surface hover:bg-primary-container/10"
+              }`}
+            >
+              <span className="font-label-md">Semua</span>
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`flex items-center gap-3 px-6 py-3 rounded-full whitespace-nowrap transition-colors border ${
+                  selectedCategory === cat.id
+                    ? "bg-primary text-white border-primary"
+                    : "bg-surface border-outline-variant/30 text-on-surface hover:bg-primary-container/10"
+                }`}
+              >
+                <span className="font-label-md">{cat.title}</span>
+              </button>
+            ))}
+            <button className="flex items-center gap-3 px-6 py-3 bg-primary text-white rounded-full whitespace-nowrap hover:opacity-90 transition-colors">
+              <span className="material-symbols-outlined">brush</span>
+              <span className="font-label-md">Custom Bouquet</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header & Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex gap-2 p-1 bg-surface-container-low rounded-xl w-fit border border-outline-variant/20">
@@ -323,21 +341,29 @@ function ExploreSection() {
       {/* Content */}
       <div className="animate-[fadeIn_0.3s_ease]">
         {activeTab === "products" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
-            {products.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                name={product.name}
-                florist={product.store?.name || "Unknown Florist"}
-                price={`Rp ${product.price.toLocaleString("id-ID")}`}
-                rating={product.rating > 0 ? product.rating.toString() : "Baru"}
-                location={product.store?.city || "Unknown"}
-                sold="0 terjual"
-                image={getImageUrl(product.store?.logo)}
-                imageAlt={product.name}
-              />
-            ))}
-          </div>
+          filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
+              {filteredProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  name={product.name}
+                  florist={product.store?.name || "Unknown Florist"}
+                  price={`Rp ${product.price.toLocaleString("id-ID")}`}
+                  rating={product.rating > 0 ? product.rating.toString() : "Baru"}
+                  location={product.store?.city || "Unknown"}
+                  sold="0 terjual"
+                  image={getImageUrl(product.store?.logo)}
+                  imageAlt={product.name}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 flex flex-col items-center justify-center text-center bg-white rounded-2xl border border-outline-variant/20 shadow-soft">
+              <span className="material-symbols-outlined text-[64px] text-outline mb-4 opacity-50">search_off</span>
+              <h3 className="font-headline font-bold text-on-surface text-[18px]">Belum ada produk di kategori ini</h3>
+              <p className="text-on-surface-variant text-[14px] mt-2">Coba pilih kategori lain atau lihat semua produk.</p>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {florists.map((florist) => (
@@ -370,7 +396,6 @@ export default function Home() {
   return (
     <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
       <HeroCarousel />
-      <CategoryChips />
       <ExploreSection />
     </main>
   );
