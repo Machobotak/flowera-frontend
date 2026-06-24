@@ -1,4 +1,7 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import ProductCard from "@/components/cards/product-card";
 import FloristCard from "@/components/cards/florist-card";
 
@@ -143,39 +146,80 @@ const FLORISTS = [
 
 /* ──────────────────────────── Sections ──────────────────────────── */
 
+const HERO_SLIDES = [
+  {
+    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCHU-MNzSwSUbbUPvKZvCkAJnjjr1Q74pczA_BThQ1vmUXiAhigqFmfVM6UJBm6PKYLM6lwwR3NMrcTTLt9dYI6OdgW0NKTbW4t9TA8qu-ZUJaBia7VZ6ym3L57bQlqRQnEc0s2CL8xzuJjMzuFph9CXFRr3tv-TDqJl2Ju2inAm_6q0EVgsVwlto2C5UtHP0eocusr5WBn4VLNDYxwoz6p-itwOP7TBGSVeE-XuAy14jdF2ULjhxN4qEUGFGCz-m7liS_ZWUqg-1Y",
+    title: "Seasonal Bloom",
+    subtitle: "Collection",
+    desc: "Experience the elegance of hand-picked peonies delivered fresh to your doorstep."
+  },
+  {
+    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB2gUwgvHVeY6k-Mj9af0voVS5A7taBgEpmlkFTl1zVrhEOYtXz_p2qiRwDkkPYfepg8PZFoARMelNrheS_Sfbk7gimiQT8hYb7mvqWroNJsZWJfRXzN70p5V1vSnIljQcRwcPvUMZoxPB4KpASwBXWz6Z2zi_jo4jghhbkeD6Wq56PRXeXB3QyWkn8VdlTpjSKyJzdX3UfhpWT_yr54S666YNUHSjPPHFKHehPl0B0oX3KWA-UD3jX489q-4DErQXTgD4RjbM-wB0",
+    title: "Midnight Grace",
+    subtitle: "Premium",
+    desc: "A luxurious arrangement of deep purple calla lilies and dark burgundy roses."
+  },
+  {
+    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuALi3jtLys9GQK4zuPNTLeK5fH-p66mY-cHWAwD4bB86HAtWgVdzDsyjW0ILgI6Rl7fwyDwrXxOE5IkIo6NArfueTT8wzW5iZnUQYKUNqibjc3HH3X4mmsTmQLolHRVY_SVDTN6wSCyWscb_Akr9nuBg6CWJA1nqSAU0a7-WgNmmWMgJxd_LVZBsV2OEM1uB_ZHItrtYyIHzZ9eZBHmYaDUsC9Ml09B3EDEjzl0zNHW1jrY2nyPKjI-ByOqzX1zcjT5BLmQ86srKGs",
+    title: "Golden Hour",
+    subtitle: "Vibrant",
+    desc: "Brighten someone's day with sunflowers and blue delphiniums."
+  }
+];
+
 function HeroCarousel() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 15000); // 15 detik
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <section className="relative w-full aspect-[21/9] rounded-xl overflow-hidden shadow-float group">
-      <div className="absolute inset-0 flex transition-transform duration-700 ease-in-out">
-        <div className="min-w-full h-full relative">
-          <img
-            className="w-full h-full object-cover"
-            alt="Seasonal bloom collection banner with pastel pink peonies"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHU-MNzSwSUbbUPvKZvCkAJnjjr1Q74pczA_BThQ1vmUXiAhigqFmfVM6UJBm6PKYLM6lwwR3NMrcTTLt9dYI6OdgW0NKTbW4t9TA8qu-ZUJaBia7VZ6ym3L57bQlqRQnEc0s2CL8xzuJjMzuFph9CXFRr3tv-TDqJl2Ju2inAm_6q0EVgsVwlto2C5UtHP0eocusr5WBn4VLNDYxwoz6p-itwOP7TBGSVeE-XuAy14jdF2ULjhxN4qEUGFGCz-m7liS_ZWUqg-1Y"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-on-surface/40 to-transparent flex items-center px-16">
-            <div className="max-w-md text-white">
-              <h2 className="font-display-lg text-display-lg mb-4 leading-tight">
-                Seasonal Bloom <br />
-                <span className="text-primary-fixed">Collection</span>
-              </h2>
-              <p className="font-body-lg text-body-lg mb-8 opacity-90">
-                Experience the elegance of hand-picked peonies delivered fresh to
-                your doorstep.
-              </p>
-              <button className="px-8 py-4 bg-primary-container text-on-primary-container font-label-md rounded-full shadow-lg hover:scale-105 transition-transform">
-                Shop The Collection
-              </button>
+      <div 
+        className="absolute inset-0 flex transition-transform duration-1000 ease-in-out"
+        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+      >
+        {HERO_SLIDES.map((slide, idx) => (
+          <div key={idx} className="min-w-full h-full relative">
+            <img
+              className="w-full h-full object-cover"
+              alt={`${slide.title} ${slide.subtitle}`}
+              src={slide.image}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-on-surface/60 to-transparent flex items-center px-16">
+              <div className="max-w-md text-white">
+                <h2 className="font-display-lg text-display-lg mb-4 leading-tight">
+                  {slide.title} <br />
+                  <span className="text-primary-fixed">{slide.subtitle}</span>
+                </h2>
+                <p className="font-body-lg text-body-lg mb-8 opacity-90 drop-shadow-md">
+                  {slide.desc}
+                </p>
+                <button className="px-8 py-4 bg-primary-container text-on-primary-container font-label-md rounded-full shadow-lg hover:scale-105 transition-transform">
+                  Shop The Collection
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Indicators */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-        <div className="w-8 h-2 bg-white rounded-full" />
-        <div className="w-2 h-2 bg-white/40 rounded-full" />
-        <div className="w-2 h-2 bg-white/40 rounded-full" />
+        {HERO_SLIDES.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrentSlide(idx)}
+            className={`h-2 rounded-full transition-all duration-500 ${
+              currentSlide === idx ? "w-8 bg-white" : "w-2 bg-white/40 hover:bg-white/60"
+            }`}
+          />
+        ))}
       </div>
     </section>
   );
@@ -214,57 +258,107 @@ function CategoryChips() {
   );
 }
 
-function TrendingBouquets() {
+function ExploreSection() {
+  const [activeTab, setActiveTab] = useState<"products" | "florists">("products");
+
+  // State untuk menyimpan data dari backend
+  const [products, setProducts] = useState<any[]>([]);
+  const [florists, setFlorists] = useState<any[]>([]);
+
+  useEffect(() => {
+    // TODO: Isi URL endpoint backend Anda di sini
+    const fetchHomeData = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL+"/api/user/home";
+        const res = await axios.get(API_URL);
+        
+        // Gunakan data dari endpoint backend
+        const data = res.data;
+
+        setProducts(data.product || []);
+        setFlorists(data.store || []);
+      } catch (error) {
+        console.error("Gagal mengambil data home:", error);
+      }
+    };
+
+    fetchHomeData();
+  }, []);
+
+  const getImageUrl = (path: string | null) => {
+    if (!path) return "https://ui-avatars.com/api/?name=Image&background=random";
+    if (path.startsWith("http")) return path;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    return `${API_URL}${path}`;
+  };
+
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-4">
-          <h3 className="font-headline-md text-headline-md">
+      {/* Header & Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex gap-2 p-1 bg-surface-container-low rounded-xl w-fit border border-outline-variant/20">
+          <button
+            onClick={() => setActiveTab("products")}
+            className={`px-6 py-2.5 rounded-lg text-[14px] font-semibold transition-all ${
+              activeTab === "products"
+                ? "bg-white text-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
             Trending Bouquets
-          </h3>
-          <span className="text-on-surface-variant font-body-md">
-            Hand-picked by our editors
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2 border border-outline-variant/30 rounded-full hover:bg-surface-container-high">
-            <span className="material-symbols-outlined">chevron_left</span>
           </button>
-          <button className="p-2 border border-outline-variant/30 rounded-full hover:bg-surface-container-high">
-            <span className="material-symbols-outlined">chevron_right</span>
+          <button
+            onClick={() => setActiveTab("florists")}
+            className={`px-6 py-2.5 rounded-lg text-[14px] font-semibold transition-all ${
+              activeTab === "florists"
+                ? "bg-white text-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
+            Nearby Florists
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-        {PRODUCTS.map((product) => (
-          <ProductCard key={product.name} {...product} />
-        ))}
+      {/* Content */}
+      <div className="animate-[fadeIn_0.3s_ease]">
+        {activeTab === "products" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
+            {products.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                name={product.name}
+                florist={product.store?.name || "Unknown Florist"}
+                price={`Rp ${product.price.toLocaleString("id-ID")}`}
+                rating={product.rating > 0 ? product.rating.toString() : "Baru"}
+                location={product.store?.city || "Unknown"}
+                sold="0 terjual"
+                image={getImageUrl(product.store?.logo)}
+                imageAlt={product.name}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {florists.map((florist) => (
+              <FloristCard 
+                key={florist.id} 
+                name={florist.name}
+                location={florist.city || "Unknown City"}
+                distance="Dekat Anda"
+                avatar={getImageUrl(florist.logo)}
+                avatarAlt={florist.name}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </section>
-  );
-}
 
-function NearbyFlorists() {
-  return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-headline-md text-headline-md">Nearby Florists</h3>
-        <a
-          className="text-primary font-label-md hover:underline flex items-center gap-1"
-          href="#"
-        >
-          See More
-          <span className="material-symbols-outlined text-[18px]">
-            arrow_forward
-          </span>
-        </a>
-      </div>
-
-      <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-4">
-        {FLORISTS.map((florist) => (
-          <FloristCard key={florist.name} {...florist} />
-        ))}
+      {/* Load More Indicator */}
+      <div className="flex justify-center pt-8 pb-4">
+        <button className="px-8 py-3 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary-container/20 transition-colors">
+          Muat Lebih Banyak
+        </button>
       </div>
     </section>
   );
@@ -277,8 +371,7 @@ export default function Home() {
     <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
       <HeroCarousel />
       <CategoryChips />
-      <TrendingBouquets />
-      <NearbyFlorists />
+      <ExploreSection />
     </main>
   );
 }

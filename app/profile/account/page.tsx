@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -77,6 +78,7 @@ const INITIAL_ADDRESSES: Address[] = [
 
 function AccountSidebar({ activeTab, onTabChange }: { activeTab: AccountTab; onTabChange: (tab: AccountTab) => void }) {
   const [akunOpen, setAkunOpen] = useState(true);
+  const { user } = useAuth();
 
   return (
     <aside className="w-full md:w-80 flex-shrink-0">
@@ -86,21 +88,21 @@ function AccountSidebar({ activeTab, onTabChange }: { activeTab: AccountTab; onT
           <img
             alt="Avatar"
             className="w-24 h-24 rounded-full object-cover border-4 border-surface-container shadow-md"
-            src={USER.avatar}
+            src={user?.avatar || USER.avatar}
           />
           <button className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform">
             <span className="material-symbols-outlined text-[14px]">edit</span>
           </button>
         </div>
-        <h2 className="font-headline text-[22px] font-semibold text-on-surface mb-0.5">{USER.name}</h2>
-        <p className="text-[14px] text-on-surface-variant mb-1">{USER.label}</p>
+        <h2 className="font-headline text-[22px] font-semibold text-on-surface mb-0.5">{user?.name || USER.name}</h2>
+        <p className="text-[14px] text-on-surface-variant mb-1">{user?.memberLabel || USER.label}</p>
         <a href="/profile/account" className="text-[12px] text-primary font-semibold hover:underline mb-4 flex items-center gap-1">
           <span className="material-symbols-outlined text-[14px]">edit</span>
           Ubah Profil
         </a>
-        <a href="/store/create" className="w-full py-2.5 bg-secondary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 flex items-center justify-center gap-2 mb-6">
+        <a href={user?.roles?.includes("seller") ? "/store" : "/store/create"} className="w-full py-2.5 bg-secondary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 flex items-center justify-center gap-2 mb-6">
           <span className="material-symbols-outlined text-[18px]">storefront</span>
-          Buat Toko
+          {user?.roles?.includes("seller") ? "Lihat Toko" : "Buat Toko"}
         </a>
 
         {/* Nav links */}
