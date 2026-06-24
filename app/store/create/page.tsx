@@ -44,7 +44,7 @@ export default function CreateStorePage() {
       setIsLoadingRegions(prev => ({ ...prev, provinces: true }));
       try {
         // TODO: Isi dengan URL API Provinsi Anda
-        const API_PROVINCE = process.env.NEXT_PUBLIC_REGIONAL_API+"/api/provinces"; 
+        const API_PROVINCE = "/regional-api/provinces"; 
         if (!API_PROVINCE) return;
 
         const response = await fetch(API_PROVINCE);
@@ -67,7 +67,7 @@ export default function CreateStorePage() {
       const fetchCities = async () => {
         setIsLoadingRegions(prev => ({ ...prev, cities: true }));
         try {
-          const API_CITY = `${process.env.NEXT_PUBLIC_REGIONAL_API}/api/cities/${formData.provinceId}`; 
+          const API_CITY = `/regional-api/cities/${formData.provinceId}`; 
           if (!API_CITY) return;
 
           const response = await fetch(API_CITY);
@@ -91,7 +91,7 @@ export default function CreateStorePage() {
       const fetchDistricts = async () => {
         setIsLoadingRegions(prev => ({ ...prev, districts: true }));
         try {
-          const API_DISTRICT = `${process.env.NEXT_PUBLIC_REGIONAL_API}/api/districts/${formData.cityId}`; 
+          const API_DISTRICT = `/regional-api/districts/${formData.cityId}`; 
           if (!API_DISTRICT) return;
 
           const response = await fetch(API_DISTRICT);
@@ -162,7 +162,7 @@ export default function CreateStorePage() {
 
     try {
       // Endpoint API pembuatan toko
-      const API_URL = process.env.NEXT_PUBLIC_API_URL+"/api/seller/store/create"; 
+      const API_URL = "/api/seller/store/create"; 
       
       if (!API_URL) {
         setTimeout(() => {

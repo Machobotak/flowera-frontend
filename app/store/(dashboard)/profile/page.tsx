@@ -8,6 +8,10 @@ export default function StoreProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
 
+  // Logo upload state
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -18,32 +22,30 @@ export default function StoreProfilePage() {
     logo: "",
   });
 
+  const fetchStoreProfile = async () => {
+    try {
+      setIsLoading(true);
+      const res = await axios.get(`/api/seller/store/detail`, { withCredentials: true });
+      
+      const data = res.data.data;
+
+      setStoreData(data);
+      setFormData({
+        name: data.name || "",
+        description: data.description || "",
+        address: data.address || "",
+        city: data.city || "",
+        type: data.type || "",
+        logo: data.logo || "",
+      });
+    } catch (error) {
+      console.error("Failed to fetch store profile", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Mock fetching store data using user provided json
-    const fetchStoreProfile = async () => {
-      try {
-        setIsLoading(true);
-        const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const res = await axios.get(`${API_URL}/api/seller/store/detail`, { withCredentials: true });
-        
-        const data = res.data.data;
-
-        setStoreData(data);
-        setFormData({
-          name: data.name || "",
-          description: data.description || "",
-          address: data.address || "",
-          city: data.city || "",
-          type: data.type || "",
-          logo: data.logo || "",
-        });
-      } catch (error) {
-        console.error("Failed to fetch store profile", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchStoreProfile();
   }, []);
 
@@ -52,22 +54,56 @@ export default function StoreProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulate API update
-    console.log("Updating store profile...", formData);
-    
-    // Simulate successful update
-    setStoreData({ ...storeData, ...formData });
-    setIsEditing(false);
-    alert("Profil toko berhasil diperbarui!");
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+    try {
+      let uploadedLogoUrl = formData.logo;
+
+      // Jika ada file logo baru, upload ke endpoint upload gambar terlebih dahulu
+      if (logoFile) {
+        const uploadData = new FormData();
+        uploadData.append("file", logoFile); // TODO: Sesuaikan dengan key yang diminta backend
+
+        const uploadRes = await axios.post(`/api/seller/store/upload/logo`, uploadData, {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        });
+
+        console.log("Response Upload Logo:", uploadRes.data);
+      } 
+      
+      // Update form text data
+      const res = await axios.put(`/api/seller/store/update`, formData, {
+        withCredentials: true 
+      });
+
+      if (res.data.status === "success") {
+        setIsEditing(false);
+        setLogoFile(null);
+        setLogoPreview(null);
+        
+        // Refresh profile data dari backend untuk mendapatkan URL foto terbaru
+        await fetchStoreProfile();
+      }
+    } catch (error) {
+      console.error("Gagal mengupdate profil toko", error);
+    }
+  };
+
 
   const getImageUrl = (path: string | null) => {
     if (!path) return "https://ui-avatars.com/api/?name=Store&background=random";
     if (path.startsWith("http")) return path;
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    return `${API_URL}${path}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
   };
 
   if (isLoading) {
@@ -163,6 +199,36 @@ export default function StoreProfilePage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* Logo Upload Section */}
+            <div className="flex items-center gap-6 mb-2">
+              <div className="w-24 h-24 rounded-full border-4 border-surface-container overflow-hidden shrink-0 relative group">
+                <img
+                  src={logoPreview || getImageUrl(formData.logo)}
+                  alt="Store Logo Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center transition-all cursor-pointer">
+                  <label htmlFor="logo-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
+                    <span className="material-symbols-outlined text-white text-[24px]">photo_camera</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="logo-upload" className="px-4 py-2 bg-surface border border-outline-variant/50 rounded-lg text-primary font-label-md cursor-pointer hover:bg-surface-container transition-colors inline-block mb-2">
+                  Ganti Logo Toko
+                </label>
+                <input
+                  type="file"
+                  id="logo-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoChange}
+                />
+                <p className="text-[12px] text-on-surface-variant">Format .jpg, .png, .jpeg (Max. 2MB)</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
@@ -191,12 +257,18 @@ export default function StoreProfilePage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[14px] font-medium text-on-surface mb-2">Tipe Toko</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[14px] font-medium text-on-surface">Tipe Toko</label>
+                    <span className="text-[10px] bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]">lock</span>
+                      Ditentukan Admin
+                    </span>
+                  </div>
                   <select
                     name="type"
                     value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                    disabled
+                    className="w-full px-4 py-3 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface-variant opacity-80 cursor-not-allowed outline-none transition-colors"
                   >
                     <option value="TOKO">TOKO Biasa</option>
                     <option value="MALL">MALL / Official</option>
