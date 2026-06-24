@@ -259,12 +259,18 @@ export default function StoreProfilePage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[14px] font-medium text-on-surface mb-2">Tipe Toko</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[14px] font-medium text-on-surface">Tipe Toko</label>
+                    <span className="text-[10px] bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]">lock</span>
+                      Ditentukan Admin
+                    </span>
+                  </div>
                   <select
                     name="type"
                     value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                    disabled
+                    className="w-full px-4 py-3 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface-variant opacity-80 cursor-not-allowed outline-none transition-colors"
                   >
                     <option value="TOKO">TOKO Biasa</option>
                     <option value="MALL">MALL / Official</option>
