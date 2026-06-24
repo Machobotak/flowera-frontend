@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Montserrat } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/navbar";
-import Footer from "@/components/layout/footer";
 import { AuthProvider } from "@/contexts/auth-context";
 
 const playfair = Playfair_Display({
@@ -39,9 +37,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-background text-on-background font-body-md">
         <AuthProvider>
-          <Navbar />
-          <div className="flex-1">{children}</div>
-          <Footer />
+          {children}
         </AuthProvider>
       </body>
     </html>

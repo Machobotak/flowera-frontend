@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { usePathname } from "next/navigation";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
@@ -25,11 +24,10 @@ const USER_MENU_ITEMS = [
 
 /* ──────────────────────────── Component ──────────────────────────── */
 
-export default function Navbar() {
+export default function BuyerNavbar() {
   const { isLoggedIn, user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -51,9 +49,6 @@ export default function Navbar() {
   };
 
   const firstName = user?.name?.trim().split(" ")[0] || "";
-  
-  // Hide navbar on seller pages
-  if (pathname?.startsWith("/store")) return null;
 
   return (
     <>
