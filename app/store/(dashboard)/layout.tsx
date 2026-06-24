@@ -17,7 +17,7 @@ export default function StoreDashboardLayout({
   
   const [storeInfo, setStoreInfo] = useState<{
     name: string;
-    logo_url?: string;
+    logo?: string;
   } | null>(null);
 
   // Fetch store detail
@@ -29,8 +29,8 @@ export default function StoreDashboardLayout({
           withCredentials: true,
         });
         
-        if (res.data) {
-          setStoreInfo(res.data);
+        if (res.data && res.data.data) {
+          setStoreInfo(res.data.data);
         }
       } catch (error) {
         console.error("Gagal mengambil info toko", error);
@@ -55,6 +55,13 @@ export default function StoreDashboardLayout({
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-surface">Memuat...</div>;
   }
+
+  const getImageUrl = (path: string | undefined) => {
+    if (!path) return "https://ui-avatars.com/api/?name=Toko&background=1F4D2E&color=fff";
+    if (path.startsWith("http")) return path;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    return `${API_URL}${path}`;
+  };
 
   return (
     <div className="flex h-screen bg-surface-container-lowest overflow-hidden">
@@ -143,9 +150,9 @@ export default function StoreDashboardLayout({
               </p>
               <p className="text-[11px] text-primary font-semibold">Seller Profile</p>
             </div>
-            <div className="w-10 h-10 rounded-full border-2 border-primary overflow-hidden bg-surface-container">
+            <div className="w-10 h-10 rounded-full border-2 border-primary overflow-hidden bg-surface-container shrink-0">
               <img 
-                src={storeInfo?.logo_url || "https://ui-avatars.com/api/?name=Toko&background=1F4D2E&color=fff"} 
+                src={getImageUrl(storeInfo?.logo)} 
                 alt="Store Logo" 
                 className="w-full h-full object-cover" 
               />
