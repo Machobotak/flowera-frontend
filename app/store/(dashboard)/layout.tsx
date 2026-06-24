@@ -58,7 +58,8 @@ export default function StoreDashboardLayout({
   const getImageUrl = (path: string | undefined) => {
     if (!path) return "https://ui-avatars.com/api/?name=Toko&background=1F4D2E&color=fff";
     if (path.startsWith("http")) return path;
-    return path;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
   };
 
   return (

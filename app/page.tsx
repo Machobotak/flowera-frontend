@@ -123,7 +123,8 @@ function ExploreSection() {
   const getImageUrl = (path: string | null) => {
     if (!path) return "https://ui-avatars.com/api/?name=Image&background=random";
     if (path.startsWith("http")) return path;
-    return path;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
   };
 
   const filteredProducts = selectedCategory

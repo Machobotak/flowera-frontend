@@ -40,7 +40,11 @@ export default function StoreProductsPage() {
       const img = images[0];
       // Backend stores as image_url field
       const url = img.image_url || img.url || img.path || (typeof img === "string" ? img : null);
-      if (url) return url;
+      if (url) {
+        if (url.startsWith("http")) return url;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        return url.startsWith("/") ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+      }
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || "P")}&background=8c4a5c&color=fff`;
   };
