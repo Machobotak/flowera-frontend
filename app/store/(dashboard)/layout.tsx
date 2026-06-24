@@ -50,6 +50,7 @@ export default function StoreDashboardLayout({
   let currentMenu = "Dashboard";
   if (pathname.includes("/orders")) currentMenu = "Pesanan";
   if (pathname.includes("/products")) currentMenu = "Produk";
+  if (pathname.includes("/profile")) currentMenu = "Toko";
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-surface">Memuat...</div>;
@@ -99,6 +100,18 @@ export default function StoreDashboardLayout({
           >
             <span className="material-symbols-outlined" style={currentMenu === "Produk" ? { fontVariationSettings: "'FILL' 1" } : {}}>inventory_2</span>
             <span className="text-[14px]">Produk</span>
+          </Link>
+
+          <Link
+            href="/store/profile"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              currentMenu === "Toko"
+                ? "bg-primary-container text-primary font-bold shadow-sm"
+                : "text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={currentMenu === "Toko" ? { fontVariationSettings: "'FILL' 1" } : {}}>store</span>
+            <span className="text-[14px]">Toko</span>
           </Link>
         </nav>
 

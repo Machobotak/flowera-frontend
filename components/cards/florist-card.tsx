@@ -6,7 +6,6 @@ interface FloristCardProps {
   distance: string;
   avatar: string;
   avatarAlt: string;
-  thumbnails: { src: string; alt: string }[];
 }
 
 export default function FloristCard({
@@ -15,7 +14,6 @@ export default function FloristCard({
   distance,
   avatar,
   avatarAlt,
-  thumbnails,
 }: FloristCardProps) {
   return (
     <div className="min-w-[320px] bg-white rounded-xl p-6 shadow-soft hover:shadow-float transition-all border border-outline-variant/10">
@@ -32,18 +30,6 @@ export default function FloristCard({
             {location} • {distance} away
           </p>
         </div>
-      </div>
-
-      {/* Thumbnail Gallery */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {thumbnails.map((thumb, idx) => (
-          <img
-            key={idx}
-            className="aspect-square object-cover rounded-lg"
-            alt={thumb.alt}
-            src={thumb.src}
-          />
-        ))}
       </div>
 
       <button className="w-full py-2 border border-secondary text-secondary font-label-md rounded-lg hover:bg-secondary/5 transition-colors">

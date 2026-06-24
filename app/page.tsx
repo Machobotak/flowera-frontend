@@ -323,7 +323,7 @@ function ExploreSection() {
       {/* Content */}
       <div className="animate-[fadeIn_0.3s_ease]">
         {activeTab === "products" ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
             {products.map((product) => (
               <ProductCard 
                 key={product.id} 
@@ -348,11 +348,6 @@ function ExploreSection() {
                 distance="Dekat Anda"
                 avatar={getImageUrl(florist.logo)}
                 avatarAlt={florist.name}
-                thumbnails={[
-                  { src: "https://ui-avatars.com/api/?name=1&background=random", alt: "thumb 1" },
-                  { src: "https://ui-avatars.com/api/?name=2&background=random", alt: "thumb 2" },
-                  { src: "https://ui-avatars.com/api/?name=3&background=random", alt: "thumb 3" }
-                ]}
               />
             ))}
           </div>
