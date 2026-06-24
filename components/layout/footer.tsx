@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { usePathname } from "next/navigation";
 
 const FOOTER_LINKS = {
   information: [
@@ -17,6 +20,11 @@ const FOOTER_LINKS = {
 const SOCIAL_ICONS = ["face_nod", "photo_camera", "share"];
 
 export default function Footer() {
+  const pathname = usePathname();
+  
+  // Hide footer on seller pages
+  if (pathname?.startsWith("/store")) return null;
+
   return (
     <footer className="bg-surface-container-low dark:bg-surface-container-high w-full pt-stack-lg pb-stack-md mt-stack-lg border-t border-outline-variant/30">
       <div className="flex flex-col items-center justify-center px-margin-desktop w-full max-w-container-max mx-auto">
