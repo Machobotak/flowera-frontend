@@ -102,7 +102,7 @@ function ExploreSection() {
     // TODO: Isi URL endpoint backend Anda di sini
     const fetchHomeData = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL+"/api/user/home";
+        const API_URL = "/api/user/home";
         // Menambahkan parameter 't' dengan timestamp mencegah browser melakukan cache pada data yang diambil
         const res = await axios.get(`${API_URL}?t=${new Date().getTime()}`);
         
@@ -123,8 +123,7 @@ function ExploreSection() {
   const getImageUrl = (path: string | null) => {
     if (!path) return "https://ui-avatars.com/api/?name=Image&background=random";
     if (path.startsWith("http")) return path;
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    return `${API_URL}${path}`;
+    return path;
   };
 
   const filteredProducts = selectedCategory

@@ -25,8 +25,7 @@ export default function StoreProfilePage() {
   const fetchStoreProfile = async () => {
     try {
       setIsLoading(true);
-      const API_URL = process.env.NEXT_PUBLIC_API_URL;
-      const res = await axios.get(`${API_URL}/api/seller/store/detail`, { withCredentials: true });
+      const res = await axios.get(`/api/seller/store/detail`, { withCredentials: true });
       
       const data = res.data.data;
 
@@ -66,7 +65,6 @@ export default function StoreProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL;
       let uploadedLogoUrl = formData.logo;
 
       // Jika ada file logo baru, upload ke endpoint upload gambar terlebih dahulu
@@ -74,7 +72,7 @@ export default function StoreProfilePage() {
         const uploadData = new FormData();
         uploadData.append("file", logoFile); // TODO: Sesuaikan dengan key yang diminta backend
 
-        const uploadRes = await axios.post(`${API_URL}/api/seller/store/upload/logo`, uploadData, {
+        const uploadRes = await axios.post(`/api/seller/store/upload/logo`, uploadData, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         });
@@ -83,7 +81,7 @@ export default function StoreProfilePage() {
       } 
       
       // Update form text data
-      const res = await axios.put(`${API_URL}/api/seller/store/update`, formData, {
+      const res = await axios.put(`/api/seller/store/update`, formData, {
         withCredentials: true 
       });
 
@@ -104,8 +102,7 @@ export default function StoreProfilePage() {
   const getImageUrl = (path: string | null) => {
     if (!path) return "https://ui-avatars.com/api/?name=Store&background=random";
     if (path.startsWith("http")) return path;
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    return `${API_URL}${path}`;
+    return path;
   };
 
   if (isLoading) {
