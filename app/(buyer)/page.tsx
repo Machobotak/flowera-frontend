@@ -222,6 +222,7 @@ function ExploreSection() {
                   sold="0 terjual"
                   image={getImageUrl(product.image, product.name)}
                   imageAlt={product.name}
+                  href={`/product/${product.id}`}
                 />
               ))}
             </div>
