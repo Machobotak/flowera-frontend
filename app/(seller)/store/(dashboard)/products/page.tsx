@@ -148,11 +148,12 @@ export default function StoreProductsPage() {
   const getImageUrl = (product: any) => {
     const images = product.product_image || product.images;
     if (images && images.length > 0) {
-      const img = images[0];
+      // Prioritaskan gambar yang di-set sebagai default cover
+      const img = images.find((i: any) => i.isDefault || i.is_default) || images[0];
       const url = img.image_url || img.url || img.path || (typeof img === "string" ? img : null);
       if (url) {
         if (url.startsWith("http")) return url;
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
         return url.startsWith("/") ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
       }
     }

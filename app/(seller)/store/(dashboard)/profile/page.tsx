@@ -202,7 +202,9 @@ export default function StoreProfilePage() {
       } 
       
       // Update form text data
-      const submitData = { ...formData };
+      // Jangan kirim state 'logo' lama agar tidak menimpa logo yang baru diupload di database
+      const { logo, ...restData } = formData;
+      const submitData: any = { ...restData };
       
       // Jika user mengisi lokasi baru menggunakan form region
       if (formData.provinceId && formData.cityId && formData.districtId && formData.addressDetail) {
@@ -219,8 +221,9 @@ export default function StoreProfilePage() {
         setLogoFile(null);
         setLogoPreview(null);
         
-        // Refresh profile data dari backend untuk mendapatkan URL foto terbaru
-        await fetchStoreProfile();
+        // Memaksa reload halaman agar Navbar di atas (yang ada di layout) juga memperbarui gambarnya
+        // dan agar browser tidak mengambil cache dari URL gambar yang lama
+        window.location.reload();
       }
     } catch (error) {
       console.error("Gagal mengupdate profil toko", error);
@@ -231,8 +234,10 @@ export default function StoreProfilePage() {
   const getImageUrl = (path: string | null) => {
     if (!path) return "https://ui-avatars.com/api/?name=Store&background=random";
     if (path.startsWith("http")) return path;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+    const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const fullPath = path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+    // Tambahkan timestamp untuk menghindari cache gambar rusak yang disimpan browser
+    return `${fullPath}?t=${new Date().getTime()}`;
   };
 
   if (isLoading) {

@@ -27,3 +27,31 @@ export interface ThumbnailImage {
   src: string;
   alt: string;
 }
+
+/* ──────────────────────────── Product Variant Types ──────────────────────────── */
+
+export interface ProductVariantPayload {
+  title: string;
+  sub_title: string;
+  price: number;
+  product_id: number;
+}
+
+export interface ProductVariantData {
+  id: number;
+  title: string;
+  sub_title: string;
+  price: number;
+  product_id: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Local form state for a variant (price kept as string for input handling) */
+export interface VariantFormEntry {
+  localId: string; // temp client-side ID for React keys
+  title: string;
+  sub_title: string;
+  price: string;
+  backendId?: number; // populated after save or when loaded from server
+}
