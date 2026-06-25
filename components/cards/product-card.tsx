@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 interface ProductCardProps {
   name: string;
@@ -11,6 +12,7 @@ interface ProductCardProps {
   sold: string;
   image: string;
   imageAlt: string;
+  href?: string;
 }
 
 const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
@@ -24,9 +26,10 @@ export default function ProductCard({
   sold,
   image,
   imageAlt,
+  href = "#",
 }: ProductCardProps) {
   return (
-    <a href="/products" className="block bg-white rounded-xl shadow-soft overflow-hidden group hover:shadow-float transition-all cursor-pointer">
+    <Link href={href} className="block bg-white rounded-xl shadow-soft overflow-hidden group hover:shadow-float transition-all cursor-pointer">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden">
         <img
@@ -83,6 +86,6 @@ export default function ProductCard({
           <span>{sold}</span>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

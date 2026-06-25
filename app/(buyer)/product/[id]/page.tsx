@@ -1,0 +1,505 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import axios from "axios";
+
+/* ──────────────────────────── Types ──────────────────────────── */
+
+interface ProductImage {
+  id: number;
+  image_url: string;
+  isDefault: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+interface ProductVariant {
+  id: number;
+  name: string;
+  price: number;
+  [key: string]: any;
+}
+
+interface AddonProduct {
+  id: number;
+  name: string;
+  price: number;
+  [key: string]: any;
+}
+
+interface ProductData {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  description: string | null;
+  rating: number;
+  isLifeFlower: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  product_image: ProductImage[];
+  store?: {
+    id: number;
+    name: string;
+    slug: string;
+    logo: string | null;
+    city: string;
+  } | null;
+}
+
+/* ──────────────────────────── Helpers ──────────────────────────── */
+
+const getImageUrl = (path: string | null): string => {
+  if (!path)
+    return "https://ui-avatars.com/api/?name=Product&background=8c4a5c&color=fff";
+  if (path.startsWith("http")) return path;
+  const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
+  return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+};
+
+const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
+
+/* ──────────────────────────── Sub‑components ──────────────────────────── */
+
+function StarRating({ rating }: { rating: number }) {
+  const max = 5;
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: max }, (_, i) => (
+        <span
+          key={i}
+          className={`material-symbols-outlined text-[20px] ${
+            i < Math.round(rating) ? "text-[#FFB129]" : "text-outline/30"
+          }`}
+          style={FILL_STYLE}
+        >
+          star
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* ──────────────────────────── States ──────────────────────────── */
+
+function LoadingState() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <p className="text-on-surface-variant text-[14px] font-medium">
+          Memuat produk...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="flex flex-col items-center text-center py-16 px-4">
+        <div className="w-20 h-20 rounded-full bg-error-container/20 flex items-center justify-center mb-5">
+          <span className="material-symbols-outlined text-error text-4xl">
+            error
+          </span>
+        </div>
+        <h2 className="font-headline text-[24px] font-semibold text-on-surface mb-2">
+          Gagal Memuat Produk
+        </h2>
+        <p className="text-on-surface-variant text-[14px] max-w-sm mb-8">
+          Terjadi kesalahan saat memuat data produk. Silakan coba lagi.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onRetry}
+            className="px-8 py-4 bg-primary text-white rounded-xl font-body text-[14px] font-semibold shadow-soft hover:shadow-float transition-all"
+          >
+            Coba Lagi
+          </button>
+          <Link
+            href="/"
+            className="px-8 py-4 border border-outline-variant/30 text-on-surface-variant rounded-xl font-body text-[14px] font-semibold hover:bg-surface-container transition-all"
+          >
+            Kembali
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotFoundState() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="flex flex-col items-center text-center py-16 px-4">
+        <div className="w-20 h-20 rounded-full bg-outline/10 flex items-center justify-center mb-5">
+          <span className="material-symbols-outlined text-outline text-4xl">
+            search_off
+          </span>
+        </div>
+        <h2 className="font-headline text-[24px] font-semibold text-on-surface mb-2">
+          Produk Tidak Ditemukan
+        </h2>
+        <p className="text-on-surface-variant text-[14px] max-w-sm mb-8">
+          Produk yang kamu cari tidak tersedia atau telah dihapus.
+        </p>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-white rounded-xl font-body text-[14px] font-semibold shadow-soft hover:shadow-float transition-all"
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            arrow_back
+          </span>
+          Kembali ke Beranda
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────── Image Gallery ──────────────────────────── */
+
+function ImageGallery({ images, productName }: { images: ProductImage[]; productName: string }) {
+  // Sort: default image first, then by id
+  const sortedImages = [...images].sort((a, b) => {
+    if (a.isDefault !== b.isDefault) return b.isDefault - a.isDefault;
+    return a.id - b.id;
+  });
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const selectedImage = sortedImages[selectedIndex] || null;
+
+  return (
+    <div className="space-y-3">
+      {/* Main Image */}
+      <div className="aspect-square rounded-2xl overflow-hidden shadow-soft border border-outline-variant/10 bg-surface-container-low">
+        <img
+          className="w-full h-full object-cover transition-opacity duration-300"
+          src={selectedImage ? getImageUrl(selectedImage.image_url) : getImageUrl(null)}
+          alt={productName}
+        />
+      </div>
+
+      {/* Thumbnails */}
+      {sortedImages.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {sortedImages.map((img, idx) => (
+            <button
+              key={img.id}
+              onClick={() => setSelectedIndex(idx)}
+              className={`relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                selectedIndex === idx
+                  ? "border-primary shadow-soft"
+                  : "border-outline-variant/20 hover:border-outline-variant/50"
+              }`}
+            >
+              <img
+                className="w-full h-full object-cover"
+                src={getImageUrl(img.image_url)}
+                alt={`${productName} - ${idx + 1}`}
+              />
+              {img.isDefault === 1 && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────────── Main Page ──────────────────────────── */
+
+export default function ProductDetailPage() {
+  const params = useParams();
+  const productId = params.id as string;
+
+  const [product, setProduct] = useState<ProductData | null>(null);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [addons, setAddons] = useState<AddonProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Selection state
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<AddonProduct[]>([]);
+
+  const fetchProduct = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      // TODO: Isi URL endpoint backend Anda di sini
+      const API_URL = `/api/user/product/detail/${productId}`;
+      const res = await axios.get(`${API_URL}`, {
+        withCredentials: true,
+      });
+
+      if (res.data?.status === "success" && res.data?.data) {
+        const { product: productData, product_variant, addon_product } = res.data.data;
+        setProduct(productData);
+        setVariants(product_variant || []);
+        setAddons(addon_product || []);
+        
+        // Auto-select first variant if exists
+        if (product_variant && product_variant.length > 0) {
+          setSelectedVariant(product_variant[0]);
+        }
+      } else {
+        setProduct(null);
+      }
+    } catch (err) {
+      setError(true);
+      console.error("Gagal mengambil data produk:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId]);
+
+  const toggleAddon = (addon: AddonProduct) => {
+    if (selectedAddons.find((a) => a.id === addon.id)) {
+      setSelectedAddons(selectedAddons.filter((a) => a.id !== addon.id));
+    } else {
+      setSelectedAddons([...selectedAddons, addon]);
+    }
+  };
+
+  /* ── Render ── */
+
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState onRetry={fetchProduct} />;
+  if (!product) return <NotFoundState />;
+
+  // Pricing calculations
+  const basePrice = product.price;
+  const variantPrice = selectedVariant ? selectedVariant.price : basePrice;
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const totalPrice = variantPrice + addonsTotal;
+
+  return (
+    <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
+      {/* ── Breadcrumb ── */}
+      <nav className="flex items-center gap-2 text-[12px] leading-4 tracking-[0.03em] font-medium text-on-surface-variant">
+        <Link className="hover:text-primary transition-colors" href="/">
+          Home
+        </Link>
+        <span>/</span>
+        {product.store && (
+          <>
+            <Link
+              className="hover:text-primary transition-colors"
+              href={`/store/${product.store.slug}`}
+            >
+              {product.store.name}
+            </Link>
+            <span>/</span>
+          </>
+        )}
+        <span className="text-on-surface font-semibold">{product.name}</span>
+      </nav>
+
+      {/* ── Product Detail ── */}
+      <div className="animate-[fadeIn_0.3s_ease]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left: Product Images */}
+          <div className="lg:col-span-5">
+            <ImageGallery
+              images={product.product_image || []}
+              productName={product.name}
+            />
+          </div>
+
+          {/* Center: Product Info */}
+          <div className="lg:col-span-4 flex flex-col justify-start space-y-5">
+            {/* Store link */}
+            {product.store && (
+              <Link
+                href={`/store/${product.store.slug}`}
+                className="flex items-center gap-3 group"
+              >
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-primary-container/50">
+                  <img
+                    className="w-full h-full object-cover"
+                    src={getImageUrl(product.store.logo)}
+                    alt={product.store.name}
+                  />
+                </div>
+                <div>
+                  <p className="text-[13px] text-on-surface-variant">Dari</p>
+                  <p className="text-[14px] font-semibold text-primary group-hover:underline">
+                    {product.store.name}
+                  </p>
+                </div>
+              </Link>
+            )}
+
+            {/* Name */}
+            <h1 className="font-headline text-[28px] font-bold text-on-surface leading-tight">
+              {product.name}
+            </h1>
+
+            {/* Rating */}
+            <div className="flex items-center gap-2">
+              <StarRating rating={product.rating} />
+              <span className="text-[13px] text-on-surface-variant">
+                ({product.rating.toFixed(1)})
+              </span>
+            </div>
+
+            {/* Price */}
+            <p className="text-[28px] font-bold text-primary">
+              Rp {variantPrice.toLocaleString("id-ID")}
+            </p>
+
+            {/* Description */}
+            {product.description && (
+              <p className="text-[14px] text-on-surface-variant leading-relaxed">
+                {product.description}
+              </p>
+            )}
+
+            {/* Meta */}
+            <div className="flex flex-wrap gap-3 text-[12px]">
+              {/* Life flower badge */}
+              {product.isLifeFlower === 1 && (
+                <span className="px-3 py-1 bg-tertiary-container/20 text-tertiary rounded-full text-[11px] font-medium flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">
+                    eco
+                  </span>
+                  Bunga Hidup
+                </span>
+              )}
+            </div>
+
+            {/* Variants */}
+            {variants.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-[14px] font-semibold text-on-surface">Varian</h3>
+                <div className="flex flex-wrap gap-2">
+                  {variants.map((v) => {
+                    const isSelected = selectedVariant?.id === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => setSelectedVariant(v)}
+                        className={`px-4 py-2 border rounded-lg text-[13px] font-medium transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-outline-variant/30 text-on-surface hover:border-primary hover:text-primary"
+                        }`}
+                      >
+                        {v.title || v.name} {v.subTitle ? `(${v.subTitle})` : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Addons */}
+            {addons.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-[14px] font-semibold text-on-surface">Tambahan (Add-on)</h3>
+                <div className="flex flex-wrap gap-2">
+                  {addons.map((a) => {
+                    const isSelected = selectedAddons.some((addon) => addon.id === a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={() => toggleAddon(a)}
+                        className={`px-4 py-2 border rounded-lg text-[13px] font-medium transition-colors ${
+                          isSelected
+                            ? "border-secondary bg-secondary/10 text-secondary"
+                            : "border-outline-variant/30 text-on-surface hover:border-secondary hover:text-secondary"
+                        }`}
+                      >
+                        + {a.title || a.name} {a.subTitle ? `(${a.subTitle})` : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Location */}
+            {product.store?.city && (
+              <p className="flex items-center gap-1.5 text-[13px] text-on-surface-variant">
+                <span className="material-symbols-outlined text-[16px] text-outline">
+                  location_on
+                </span>
+                {product.store.city}
+              </p>
+            )}
+          </div>
+
+          {/* Right: Order Summary */}
+          <div className="lg:col-span-3">
+            <div className="sticky top-24 bg-white border border-outline-variant/30 rounded-xl p-6 shadow-sm">
+              <h3 className="font-body text-[14px] leading-5 tracking-[0.05em] font-semibold text-on-surface-variant mb-6 uppercase tracking-wider">
+                Order Summary
+              </h3>
+
+              <div className="space-y-4 mb-8">
+                {/* Base Price / Variant Price */}
+                <div className="flex justify-between font-body text-[14px] leading-6">
+                  <span className="text-on-surface-variant">
+                    {selectedVariant ? selectedVariant.title || selectedVariant.name : "Harga Dasar"}
+                  </span>
+                  <span className="font-medium">Rp {variantPrice.toLocaleString("id-ID")}</span>
+                </div>
+
+                {/* Selected Addons */}
+                {selectedAddons.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex justify-between font-body text-[14px] leading-6 text-on-surface-variant"
+                  >
+                    <span>{a.title || a.name}</span>
+                    <span>+Rp {a.price.toLocaleString("id-ID")}</span>
+                  </div>
+                ))}
+
+                {selectedAddons.length > 0 && <hr className="border-outline-variant/30" />}
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-2">
+                  <span className="font-bold text-on-surface">Total</span>
+                  <span className="text-[24px] leading-8 font-bold text-primary">
+                    Rp {totalPrice.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3">
+                <button className="w-full bg-[#8c4a5c] text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-opacity-90 transition-colors active:scale-[0.98]">
+                  Order Now
+                </button>
+                <button className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]">
+                  Add to Cart
+                </button>
+                <button className="w-full text-[#8c4a5c] py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-[#8c4a5c]/5 rounded-lg transition-colors">
+                  <span className="material-symbols-outlined text-sm">
+                    favorite_border
+                  </span>
+                  Save Design
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
