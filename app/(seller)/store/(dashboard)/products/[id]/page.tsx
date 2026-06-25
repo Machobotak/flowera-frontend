@@ -3,12 +3,15 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import axios from "axios";
+import type { VariantFormEntry } from "@/types/product";
 
 interface ImagePreview {
   id: string;
+  backendId?: number; // real image ID from backend
   file?: File;        // only set for new uploads
   preview: string;   // object URL (new) or resolved URL (existing)
   isExisting?: boolean;
+  isDefault?: boolean; // true if this is the default cover image
 }
 
 export default function ProductFormPage() {
@@ -23,6 +26,19 @@ export default function ProductFormPage() {
   const [description, setDescription] = useState("");
   const [isLifeFlower, setIsLifeFlower] = useState(true);
 
+  // ─── Variant state ───
+  const [variants, setVariants] = useState<VariantFormEntry[]>([]);
+  const [newVariantTitle, setNewVariantTitle] = useState("");
+  const [newVariantSubtitle, setNewVariantSubtitle] = useState("");
+  const [newVariantPrice, setNewVariantPrice] = useState("");
+
+  // ─── Variant edit state ───
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [editVariantTitle, setEditVariantTitle] = useState("");
+  const [editVariantSubtitle, setEditVariantSubtitle] = useState("");
+  const [editVariantPrice, setEditVariantPrice] = useState("");
+  const [isSavingVariant, setIsSavingVariant] = useState<string | null>(null); // localId of variant being saved/deleted
+
   // ─── Image state ───
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -31,8 +47,12 @@ export default function ProductFormPage() {
   // ─── Page state ───
   const [isLoadingProduct, setIsLoadingProduct] = useState(isEditMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStep, setSubmitStep] = useState<"idle" | "saving" | "uploading" | "done">("idle");
+  const [submitStep, setSubmitStep] = useState<"idle" | "saving" | "uploading" | "setting_cover" | "creating_variants" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  // ─── Default cover state ───
+  const [defaultImageId, setDefaultImageId] = useState<string | null>(null);
+  const [settingCoverId, setSettingCoverId] = useState<string | null>(null);
 
   // ─── Load existing product on edit mode ───
   useEffect(() => {
@@ -51,17 +71,46 @@ export default function ProductFormPage() {
 
         // Load existing images as previews
         const existingImages = found.product_image || found.images || [];
+        const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
         const resolved: ImagePreview[] = existingImages.map((img: any) => {
           const raw = img.image_url || img.url || img.path || (typeof img === "string" ? img : "");
-          // Backend returns relative paths like /uploads/products/xxx.png
-          // Next.js rewrites /uploads/:path* → backend, so we use raw URL directly
+          let previewUrl = raw;
+          if (raw && !raw.startsWith("http")) {
+            previewUrl = raw.startsWith("/") ? `${baseUrl}${raw}` : `${baseUrl}/${raw}`;
+          }
+          const imgId = img.id || Math.random();
           return {
-            id: `existing-${img.id || Math.random()}`,
-            preview: raw,
+            id: `existing-${imgId}`,
+            backendId: typeof img.id === "number" ? img.id : parseInt(img.id) || undefined,
+            preview: previewUrl,
             isExisting: true,
+            isDefault: img.isDefault || img.is_default || false,
           };
         });
         setImages(resolved);
+
+        // Track which image is the default cover
+        const defaultImg = resolved.find((img) => img.isDefault);
+        if (defaultImg) setDefaultImageId(defaultImg.id);
+
+        // Load existing variants
+        try {
+          const detailRes = await axios.get(`/api/user/product/detail/${productId}`, { withCredentials: true });
+          const detailData = detailRes.data?.data || detailRes.data || {};
+          const existingVariants = detailData.product_variant || [];
+          if (Array.isArray(existingVariants) && existingVariants.length > 0) {
+            const mapped: VariantFormEntry[] = existingVariants.map((v: any) => ({
+              localId: `existing-var-${v.id}`,
+              title: v.title || v.name || "",
+              sub_title: v.sub_title || "",
+              price: String(v.price || ""),
+              backendId: v.id,
+            }));
+            setVariants(mapped);
+          }
+        } catch {
+          // Variant fetch is non-fatal — variants just won't pre-populate
+        }
       } catch (err: any) {
         setError(err.message || "Gagal memuat data produk");
       } finally {
@@ -115,6 +164,137 @@ export default function ProductFormPage() {
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setPrice(e.target.value.replace(/\D/g, ""));
 
+  // ─── Variant management ───
+  const handleVariantPriceChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setNewVariantPrice(e.target.value.replace(/\D/g, ""));
+
+  const addVariant = () => {
+    if (!newVariantTitle.trim()) return;
+    if (!newVariantPrice || parseInt(newVariantPrice) <= 0) return;
+    const entry: VariantFormEntry = {
+      localId: `var-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: newVariantTitle.trim(),
+      sub_title: newVariantSubtitle.trim(),
+      price: newVariantPrice,
+    };
+    setVariants((prev) => [...prev, entry]);
+    setNewVariantTitle("");
+    setNewVariantSubtitle("");
+    setNewVariantPrice("");
+  };
+
+  const removeVariant = (localId: string) => {
+    setVariants((prev) => prev.filter((v) => v.localId !== localId));
+  };
+
+  // ─── Variant edit & delete (server-aware) ───
+  const startEditVariant = (v: VariantFormEntry) => {
+    setEditingVariantId(v.localId);
+    setEditVariantTitle(v.title);
+    setEditVariantSubtitle(v.sub_title);
+    setEditVariantPrice(v.price);
+  };
+
+  const cancelEditVariant = () => {
+    setEditingVariantId(null);
+    setEditVariantTitle("");
+    setEditVariantSubtitle("");
+    setEditVariantPrice("");
+  };
+
+  const saveEditVariant = async () => {
+    if (!editingVariantId) return;
+    if (!editVariantTitle.trim()) return;
+    if (!editVariantPrice || parseInt(editVariantPrice) <= 0) return;
+
+    const target = variants.find((v) => v.localId === editingVariantId);
+    if (!target) return;
+
+    const updatedTitle = editVariantTitle.trim();
+    const updatedSubtitle = editVariantSubtitle.trim();
+    const updatedPrice = editVariantPrice;
+
+    // If variant already exists on server, call update API
+    if (target.backendId) {
+      setIsSavingVariant(editingVariantId);
+      try {
+        await axios.put(
+          `/api/seller/product-variant/update/${target.backendId}`,
+          {
+            title: updatedTitle,
+            sub_title: updatedSubtitle,
+            price: parseInt(updatedPrice),
+          },
+          { withCredentials: true }
+        );
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || "Gagal memperbarui varian";
+        setError(msg);
+        setIsSavingVariant(null);
+        return;
+      }
+      setIsSavingVariant(null);
+    }
+
+    // Update local state
+    setVariants((prev) =>
+      prev.map((v) =>
+        v.localId === editingVariantId
+          ? { ...v, title: updatedTitle, sub_title: updatedSubtitle, price: updatedPrice }
+          : v
+      )
+    );
+    cancelEditVariant();
+  };
+
+  const deleteVariant = async (v: VariantFormEntry) => {
+    // If variant exists on server, call delete API first
+    if (v.backendId) {
+      setIsSavingVariant(v.localId);
+      try {
+        await axios.delete(`/api/seller/product-variant/delete/${v.backendId}`, {
+          withCredentials: true,
+        });
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || "Gagal menghapus varian";
+        setError(msg);
+        setIsSavingVariant(null);
+        return;
+      }
+      setIsSavingVariant(null);
+    }
+    removeVariant(v.localId);
+  };
+
+  const handleEditVariantPriceChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setEditVariantPrice(e.target.value.replace(/\D/g, ""));
+
+  // ─── Set default cover image ───
+  const setDefaultCover = async (img: ImagePreview) => {
+    if (!img.backendId || settingCoverId) return;
+    const pid = isEditMode ? parseInt(productId) : null;
+    if (!pid) return;
+
+    setSettingCoverId(img.id);
+    try {
+      await axios.post(
+        `/api/seller/product/images/default/${img.backendId}`,
+        { product_id: pid },
+        { withCredentials: true }
+      );
+      // Update local state
+      setDefaultImageId(img.id);
+      setImages((prev) =>
+        prev.map((i) => ({ ...i, isDefault: i.id === img.id }))
+      );
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Gagal mengatur foto cover";
+      setError(msg);
+    } finally {
+      setSettingCoverId(null);
+    }
+  };
+
   // ─── Submit ───
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,8 +308,12 @@ export default function ProductFormPage() {
     try {
       setSubmitStep("saving");
 
+      let activeProductId: number;
+
       if (isEditMode) {
         // ── Update mode ──
+        activeProductId = parseInt(productId);
+
         await axios.put(
           `/api/seller/product/update?product=${productId}`,
           {
@@ -165,18 +349,55 @@ export default function ProductFormPage() {
           { withCredentials: true }
         );
 
-        const newId = createRes.data?.data?.id || createRes.data?.id;
-        if (!newId) throw new Error("Gagal mendapatkan ID produk dari server");
+        activeProductId = createRes.data?.data?.id || createRes.data?.id;
+        if (!activeProductId) throw new Error("Gagal mendapatkan ID produk dari server");
 
         const newFiles = images.filter((img) => img.file);
         if (newFiles.length > 0) {
           setSubmitStep("uploading");
           const formData = new FormData();
           newFiles.forEach((img) => formData.append("files", img.file!));
-          await axios.post(`/api/seller/product/${newId}/images`, formData, {
+          const uploadRes = await axios.post(`/api/seller/product/${activeProductId}/images`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
             withCredentials: true,
           });
+
+          // Auto-set the first uploaded image as default cover
+          setSubmitStep("setting_cover");
+          const uploadedImages = uploadRes.data?.data || uploadRes.data?.images || [];
+          if (uploadedImages.length > 0) {
+            const firstImgId = uploadedImages[0].id;
+            if (firstImgId) {
+              try {
+                await axios.post(
+                  `/api/seller/product/images/default/${firstImgId}`,
+                  { product_id: activeProductId },
+                  { withCredentials: true }
+                );
+              } catch {
+                // Non-fatal: product is created, cover just not set
+                console.warn("Gagal mengatur foto cover default");
+              }
+            }
+          }
+        }
+      }
+
+      // ── Create new variants (applies to both create & edit mode) ──
+      const variantsToCreate = variants.filter((v) => !v.backendId);
+      if (variantsToCreate.length > 0) {
+        setSubmitStep("creating_variants");
+        for (const variant of variantsToCreate) {
+          await axios.post(
+            "/api/seller/product-variant/create",
+            {
+              title: variant.title,
+              sub_title: variant.sub_title,
+              price: parseInt(variant.price),
+              product_id: activeProductId,
+            },
+            { withCredentials: true }
+          );
         }
       }
 
@@ -191,12 +412,41 @@ export default function ProductFormPage() {
     }
   };
 
+  // ─── Mini progress components ───
+  const StepIndicator = ({ label, status }: { label: string; status: "active" | "done" | "pending" }) => (
+    <div
+      className={`flex items-center gap-2 text-[12px] ${
+        status === "active"
+          ? "text-primary font-bold"
+          : status === "done"
+          ? "text-secondary"
+          : "text-on-surface-variant"
+      }`}
+    >
+      <span
+        className="material-symbols-outlined text-[16px]"
+        style={status === "done" ? { fontVariationSettings: "'FILL' 1" } : {}}
+      >
+        {status === "active" ? "pending" : status === "done" ? "check_circle" : "circle"}
+      </span>
+      {label}
+    </div>
+  );
+
+  const StepDivider = ({ done }: { done: boolean }) => (
+    <div className={`w-6 h-[2px] rounded-full ${done ? "bg-secondary" : "bg-outline-variant/30"}`} />
+  );
+
   const getStepText = () => {
     switch (submitStep) {
       case "saving":
         return isEditMode ? "Menyimpan perubahan..." : "Membuat produk...";
       case "uploading":
         return "Mengunggah gambar...";
+      case "setting_cover":
+        return "Mengatur foto cover...";
+      case "creating_variants":
+        return "Menyimpan varian...";
       case "done":
         return "Berhasil! Mengalihkan...";
       default:
@@ -418,6 +668,209 @@ export default function ProductFormPage() {
           </div>
         </div>
 
+        {/* ─── Variant Card ─── */}
+        <div className="bg-white rounded-2xl p-6 md:p-8 shadow-soft border border-outline-variant/20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-tertiary-container/50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[20px] text-tertiary">layers</span>
+            </div>
+            <div>
+              <h3 className="text-[16px] font-bold text-on-surface">Varian Produk</h3>
+              <p className="text-[12px] text-on-surface-variant">
+                Tambahkan varian seperti ukuran atau warna yang berbeda
+              </p>
+            </div>
+          </div>
+
+          {/* Existing Variants List */}
+          {variants.length > 0 && (
+            <div className="space-y-2 mb-5">
+              {variants.map((v) => {
+                const isEditing = editingVariantId === v.localId;
+                const isBusy = isSavingVariant === v.localId;
+
+                if (isEditing) {
+                  // ═══════ Edit Mode ═══════
+                  return (
+                    <div
+                      key={v.localId}
+                      className="p-4 bg-surface-container-low rounded-xl border-2 border-primary/30 space-y-3"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[12px] font-semibold text-on-surface-variant">
+                            Nama Varian <span className="text-error">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={editVariantTitle}
+                            onChange={(e) => setEditVariantTitle(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[12px] font-semibold text-on-surface-variant">
+                            Sub Judul
+                          </label>
+                          <input
+                            type="text"
+                            value={editVariantSubtitle}
+                            onChange={(e) => setEditVariantSubtitle(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-end gap-3">
+                        <div className="flex-1 space-y-1.5">
+                          <label className="text-[12px] font-semibold text-on-surface-variant">
+                            Harga <span className="text-error">*</span>
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-on-surface-variant">
+                              Rp
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={editVariantPrice ? parseInt(editVariantPrice).toLocaleString("id-ID") : ""}
+                              onChange={handleEditVariantPriceChange}
+                              className="w-full pl-11 pr-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={saveEditVariant}
+                          disabled={!!isBusy}
+                          className="px-4 py-2 bg-primary text-white rounded-lg text-[12px] font-semibold hover:shadow-float active:scale-[0.98] transition-all flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {isBusy ? (
+                            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                          ) : (
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                          )}
+                          Simpan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditVariant}
+                          disabled={!!isBusy}
+                          className="px-4 py-2 border border-outline-variant/40 text-on-surface rounded-lg text-[12px] font-semibold hover:bg-surface-container transition-all disabled:opacity-50"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ═══════ View Mode ═══════
+                return (
+                  <div
+                    key={v.localId}
+                    className="flex items-center gap-3 p-4 bg-surface-container-low rounded-xl border border-outline-variant/20 group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-semibold text-on-surface truncate">{v.title}</p>
+                      {v.sub_title && (
+                        <p className="text-[12px] text-on-surface-variant truncate">{v.sub_title}</p>
+                      )}
+                      <p className="text-[13px] font-semibold text-primary mt-0.5">
+                        Rp {parseInt(v.price).toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => startEditVariant(v)}
+                        disabled={!!isSavingVariant || !!editingVariantId}
+                        className="w-8 h-8 rounded-lg bg-primary-container/50 hover:bg-primary-container flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-primary">edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteVariant(v)}
+                        disabled={!!isSavingVariant || !!editingVariantId}
+                        className="w-8 h-8 rounded-lg bg-error-container/50 hover:bg-error-container flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+                      >
+                        {isBusy ? (
+                          <span className="material-symbols-outlined animate-spin text-[16px] text-error">progress_activity</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[18px] text-error">close</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add Variant Form */}
+          <div className="space-y-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant/20">
+            <p className="text-[13px] font-semibold text-on-surface-variant">Tambah Varian Baru</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold text-on-surface-variant">
+                  Nama Varian <span className="text-error">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newVariantTitle}
+                  onChange={(e) => setNewVariantTitle(e.target.value)}
+                  placeholder="Contoh: Ukuran M"
+                  className="w-full px-4 py-3 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold text-on-surface-variant">
+                  Sub Judul
+                </label>
+                <input
+                  type="text"
+                  value={newVariantSubtitle}
+                  onChange={(e) => setNewVariantSubtitle(e.target.value)}
+                  placeholder="Contoh: 10 Tangkai"
+                  className="w-full px-4 py-3 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-end gap-3">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[12px] font-semibold text-on-surface-variant">
+                  Harga <span className="text-error">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-on-surface-variant">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={newVariantPrice ? parseInt(newVariantPrice).toLocaleString("id-ID") : ""}
+                    onChange={handleVariantPriceChange}
+                    placeholder="0"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant outline-none"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={addVariant}
+                className="px-5 py-3 bg-primary text-white rounded-xl text-[13px] font-semibold hover:shadow-float active:scale-[0.98] transition-all flex items-center gap-2 shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                Tambah
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* ─── Image Upload Card ─── */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-soft border border-outline-variant/20">
           <div className="flex items-center justify-between mb-6">
@@ -491,45 +944,75 @@ export default function ProductFormPage() {
           {/* Image Previews */}
           {images.length > 0 && (
             <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 ${images.length < 5 ? "mt-4" : ""}`}>
-              {images.map((img, index) => (
-                <div
-                  key={img.id}
-                  className="relative group aspect-square rounded-xl overflow-hidden border-2 border-outline-variant/20 hover:border-primary/40 transition-all"
-                >
-                  <img
-                    src={`${process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE}${img.preview}`}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback for broken existing image URLs
-                      (e.target as HTMLImageElement).src =
-                        "https://ui-avatars.com/api/?name=IMG&background=8c4a5c&color=fff";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                  {/* Badge: Utama or Existing */}
-                  {index === 0 && (
-                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-md">
-                      Utama
-                    </div>
-                  )}
-                  {img.isExisting && (
-                    <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/50 text-white text-[10px] font-bold rounded-md">
-                      Tersimpan
-                    </div>
-                  )}
-
-                  {/* Remove button */}
-                  <button
-                    type="button"
-                    onClick={() => removeImage(img.id)}
-                    className="absolute top-2 right-2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+              {images.map((img, index) => {
+                const isCover = img.id === defaultImageId;
+                const isSettingThis = settingCoverId === img.id;
+                return (
+                  <div
+                    key={img.id}
+                    className={`relative group aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                      isCover
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-outline-variant/20 hover:border-primary/40"
+                    }`}
                   >
-                    <span className="material-symbols-outlined text-[16px] text-error">close</span>
-                  </button>
-                </div>
-              ))}
+                    <img
+                      src={img.preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "https://ui-avatars.com/api/?name=IMG&background=8c4a5c&color=fff";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    {/* Badge: Cover / Tersimpan */}
+                    {isCover && (
+                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-md flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                        Cover
+                      </div>
+                    )}
+                    {img.isExisting && !isCover && (
+                      <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/50 text-white text-[10px] font-bold rounded-md">
+                        Tersimpan
+                      </div>
+                    )}
+
+                    {/* Set as Cover button (only for existing images in edit mode) */}
+                    {img.isExisting && img.backendId && !isCover && isEditMode && (
+                      <button
+                        type="button"
+                        onClick={() => setDefaultCover(img)}
+                        disabled={!!settingCoverId}
+                        className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 hover:bg-white text-primary text-[10px] font-bold rounded-md opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {isSettingThis ? (
+                          <>
+                            <span className="material-symbols-outlined animate-spin text-[12px]">progress_activity</span>
+                            Mengatur...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-[12px]">photo_camera_front</span>
+                            Jadikan Cover
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Remove button */}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(img.id)}
+                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-error">close</span>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -589,70 +1072,48 @@ export default function ProductFormPage() {
 
           {/* Progress steps indicator */}
           {isSubmitting && (
-            <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-outline-variant/20">
-              <div
-                className={`flex items-center gap-2 text-[12px] ${
+            <div className="flex items-center justify-center gap-2 md:gap-4 mt-4 pt-4 border-t border-outline-variant/20 flex-wrap">
+              {/* Step 1: Save Product */}
+              <StepIndicator
+                label={isEditMode ? "Simpan Data" : "Buat Produk"}
+                status={
                   submitStep === "saving"
-                    ? "text-primary font-bold"
-                    : submitStep === "uploading" || submitStep === "done"
-                    ? "text-secondary"
-                    : "text-on-surface-variant"
-                }`}
-              >
-                <span
-                  className="material-symbols-outlined text-[16px]"
-                  style={
-                    submitStep !== "saving" && submitStep !== "idle"
-                      ? { fontVariationSettings: "'FILL' 1" }
-                      : {}
-                  }
-                >
-                  {submitStep === "saving" ? "pending" : "check_circle"}
-                </span>
-                {isEditMode ? "Simpan Data" : "Buat Produk"}
-              </div>
-              <div
-                className={`w-8 h-[2px] rounded-full ${
-                  submitStep === "uploading" || submitStep === "done"
-                    ? "bg-secondary"
-                    : "bg-outline-variant/30"
-                }`}
+                    ? "active"
+                    : submitStep === "idle"
+                    ? "pending"
+                    : "done"
+                }
               />
-              <div
-                className={`flex items-center gap-2 text-[12px] ${
+              <StepDivider done={submitStep !== "saving" && submitStep !== "idle"} />
+              {/* Step 2: Upload Foto */}
+              <StepIndicator
+                label="Upload Foto"
+                status={
                   submitStep === "uploading"
-                    ? "text-primary font-bold"
-                    : submitStep === "done"
-                    ? "text-secondary"
-                    : "text-on-surface-variant"
-                }`}
-              >
-                <span
-                  className="material-symbols-outlined text-[16px]"
-                  style={submitStep === "done" ? { fontVariationSettings: "'FILL' 1" } : {}}
-                >
-                  {submitStep === "uploading" ? "pending" : submitStep === "done" ? "check_circle" : "circle"}
-                </span>
-                Upload Foto
-              </div>
-              <div
-                className={`w-8 h-[2px] rounded-full ${
-                  submitStep === "done" ? "bg-secondary" : "bg-outline-variant/30"
-                }`}
+                    ? "active"
+                    : submitStep === "saving" || submitStep === "idle"
+                    ? "pending"
+                    : "done"
+                }
               />
-              <div
-                className={`flex items-center gap-2 text-[12px] ${
-                  submitStep === "done" ? "text-secondary font-bold" : "text-on-surface-variant"
-                }`}
-              >
-                <span
-                  className="material-symbols-outlined text-[16px]"
-                  style={submitStep === "done" ? { fontVariationSettings: "'FILL' 1" } : {}}
-                >
-                  {submitStep === "done" ? "check_circle" : "circle"}
-                </span>
-                Selesai
-              </div>
+              <StepDivider done={submitStep === "creating_variants" || submitStep === "done"} />
+              {/* Step 3: Varian */}
+              <StepIndicator
+                label="Varian"
+                status={
+                  submitStep === "creating_variants"
+                    ? "active"
+                    : submitStep === "done"
+                    ? "done"
+                    : "pending"
+                }
+              />
+              <StepDivider done={submitStep === "done"} />
+              {/* Step 4: Selesai */}
+              <StepIndicator
+                label="Selesai"
+                status={submitStep === "done" ? "active" : "pending"}
+              />
             </div>
           )}
         </div>

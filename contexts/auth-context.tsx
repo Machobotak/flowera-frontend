@@ -87,9 +87,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const validateSession = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/auth/me`);
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await axios.get(`${API_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
         if (res.data) {
           const validatedUser = buildUser(res.data);
+          
+          // Set default header for future requests
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
           localStorage.setItem(
             "user",
@@ -144,6 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "refreshToken",
           res.data.refreshToken
         );
+        
+        axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.accessToken}`;
 
         const me = await axios.get(
           `${API_URL}/api/auth/me`
@@ -200,6 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "refreshToken",
           res.data.refreshToken
         );
+        
+        axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.accessToken}`;
 
         const me = await axios.get(
           `${API_URL}/api/auth/me`
@@ -234,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("user");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    delete axios.defaults.headers.common["Authorization"];
 
     // Await the server logout to clear the session cookie BEFORE any redirect.
     // Otherwise the next /api/auth/me call would still see a valid session
