@@ -95,18 +95,19 @@ function ExploreSection() {
   // State untuk menyimpan data dari backend
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);       // semua produk (dari /home)
+  const [categoryProducts, setCategoryProducts] = useState<any[] | null>(null); // produk hasil filter API
+  const [isLoadingCategory, setIsLoadingCategory] = useState(false);
   const [florists, setFlorists] = useState<any[]>([]);
 
   useEffect(() => {
-    // TODO: Isi URL endpoint backend Anda di sini
     const fetchHomeData = async () => {
       try {
         const API_URL = "/api/user/home";
         // Menambahkan parameter 't' dengan timestamp mencegah browser melakukan cache pada data yang diambil
         const res = await axios.get(`${API_URL}?t=${new Date().getTime()}`);
         console.log(res);
-        
+
         // Gunakan data dari endpoint backend
         const data = res.data;
 
@@ -121,17 +122,59 @@ function ExploreSection() {
     fetchHomeData();
   }, []);
 
-  const getImageUrl = (path: string | null, name_product: string ) => {
-    
-    if (!path) return `https://ui-avatars.com/api/?name=${name_product}&background=random`;
-    if (path.startsWith("http")) return path;
-    // const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
-    return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+  // Fetch produk berdasarkan kategori yang dipilih
+  useEffect(() => {
+    if (selectedCategory === null) {
+      setCategoryProducts(null); // pakai semua produk
+      return;
+    }
+
+    let cancelled = false;
+    const fetchCategoryProducts = async () => {
+      setIsLoadingCategory(true);
+      try {
+        const res = await axios.get(`/api/user/product/categories/${selectedCategory}`, {
+          withCredentials: true,
+        });
+        const data: any[] = res.data?.data ?? res.data ?? [];
+        if (!cancelled) setCategoryProducts(data);
+      } catch (error) {
+        console.error("Gagal mengambil produk berdasarkan kategori:", error);
+        if (!cancelled) setCategoryProducts([]);
+      } finally {
+        if (!cancelled) setIsLoadingCategory(false);
+      }
+    };
+
+    fetchCategoryProducts();
+    return () => { cancelled = true; };
+  }, [selectedCategory]);
+
+  const getImageUrl = (item: any): string => {
+    // Cek product_image / images array dulu (format produk)
+    const images = item.product_image || item.images;
+    if (images && images.length > 0) {
+      const img = images.find((i: any) => i.isDefault || i.is_default) || images[0];
+      const path = img.image_url || img.url || img.path || (typeof img === "string" ? img : null);
+      if (path) {
+        if (path.startsWith("http")) return path;
+        const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
+        return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+      }
+    }
+    // Fallback: product.image atau store.logo
+    const path = item.image || item.logo;
+    if (path) {
+      if (path.startsWith("http")) return path;
+      const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
+      return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || "P")}&background=8c4a5c&color=fff`;
   };
 
-  const filteredProducts = selectedCategory
-    ? products.filter((p) => p.categoryId === selectedCategory || p.productCategoryId === selectedCategory || (p.categories && p.categories.some((c: any) => c.id === selectedCategory)))
+  // Pilih source produk: dari API kategori atau dari /home
+  const displayProducts = selectedCategory !== null && categoryProducts !== null
+    ? categoryProducts
     : products;
 
   return (
@@ -209,18 +252,23 @@ function ExploreSection() {
       {/* Content */}
       <div className="animate-[fadeIn_0.3s_ease]">
         {activeTab === "products" ? (
-          filteredProducts.length > 0 ? (
+          isLoadingCategory ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center">
+              <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-4 animate-spin">progress_activity</span>
+              <p className="text-on-surface-variant text-[14px]">Memuat produk...</p>
+            </div>
+          ) : displayProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
-              {filteredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
+              {displayProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
                   name={product.name}
-                  florist={product.store?.name || "Unknown Florist"}
+                  florist={product.store?.name || product.sub_product_categories?.title || "Unknown Florist"}
                   price={`Rp ${product.price.toLocaleString("id-ID")}`}
                   rating={product.rating > 0 ? product.rating.toString() : "Baru"}
                   location={product.store?.city || "Unknown"}
                   sold="0 terjual"
-                  image={getImageUrl(product.image, product.name)}
+                  image={getImageUrl(product)}
                   imageAlt={product.name}
                   href={`/product/${product.id}`}
                 />
@@ -236,12 +284,12 @@ function ExploreSection() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {florists.map((florist) => (
-              <FloristCard 
-                key={florist.id} 
+              <FloristCard
+                key={florist.id}
                 name={florist.name}
                 location={florist.city || "Unknown City"}
                 distance="Dekat Anda"
-                avatar={getImageUrl(florist.logo, florist.name)}
+                avatar={getImageUrl(florist)}
                 avatarAlt={florist.name}
               />
             ))}
@@ -250,7 +298,7 @@ function ExploreSection() {
       </div>
 
       {/* Load More Indicator */}
-      {((activeTab === "products" && filteredProducts.length >= 50) || 
+      {((activeTab === "products" && displayProducts.length >= 50) ||
         (activeTab === "florists" && florists.length >= 50)) && (
         <div className="flex justify-center pt-8 pb-4">
           <button className="px-8 py-3 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary-container/20 transition-colors">
