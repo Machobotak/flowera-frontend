@@ -105,6 +105,7 @@ function ExploreSection() {
         const API_URL = "/api/user/home";
         // Menambahkan parameter 't' dengan timestamp mencegah browser melakukan cache pada data yang diambil
         const res = await axios.get(`${API_URL}?t=${new Date().getTime()}`);
+        console.log(res);
         
         // Gunakan data dari endpoint backend
         const data = res.data;
@@ -120,10 +121,12 @@ function ExploreSection() {
     fetchHomeData();
   }, []);
 
-  const getImageUrl = (path: string | null) => {
-    if (!path) return "https://ui-avatars.com/api/?name=Image&background=random";
+  const getImageUrl = (path: string | null, name_product: string ) => {
+    
+    if (!path) return `https://ui-avatars.com/api/?name=${name_product}&background=random`;
     if (path.startsWith("http")) return path;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    // const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
     return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
   };
 
@@ -217,8 +220,9 @@ function ExploreSection() {
                   rating={product.rating > 0 ? product.rating.toString() : "Baru"}
                   location={product.store?.city || "Unknown"}
                   sold="0 terjual"
-                  image={getImageUrl(product.store?.logo)}
+                  image={getImageUrl(product.image, product.name)}
                   imageAlt={product.name}
+                  href={`/product/${product.id}`}
                 />
               ))}
             </div>
@@ -237,7 +241,7 @@ function ExploreSection() {
                 name={florist.name}
                 location={florist.city || "Unknown City"}
                 distance="Dekat Anda"
-                avatar={getImageUrl(florist.logo)}
+                avatar={getImageUrl(florist.logo, florist.name)}
                 avatarAlt={florist.name}
               />
             ))}
