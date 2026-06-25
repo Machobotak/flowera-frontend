@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+interface Region {
+  id: string | number; 
+  name: string;
+}
+
 export default function StoreProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +25,25 @@ export default function StoreProfilePage() {
     city: "",
     type: "",
     logo: "",
+    // Regional state for editing
+    provinceId: "",
+    provinceName: "",
+    cityId: "",
+    cityName: "",
+    districtId: "",
+    districtName: "",
+    addressDetail: "",
+  });
+
+  // Region State
+  const [provinces, setProvinces] = useState<Region[]>([]);
+  const [cities, setCities] = useState<Region[]>([]);
+  const [districts, setDistricts] = useState<Region[]>([]);
+  
+  const [isLoadingRegions, setIsLoadingRegions] = useState({
+    provinces: false,
+    cities: false,
+    districts: false,
   });
 
   const fetchStoreProfile = async () => {
@@ -37,6 +61,13 @@ export default function StoreProfilePage() {
         city: data.city || "",
         type: data.type || "",
         logo: data.logo || "",
+        provinceId: "",
+        provinceName: "",
+        cityId: "",
+        cityName: "",
+        districtId: "",
+        districtName: "",
+        addressDetail: "",
       });
     } catch (error) {
       console.error("Failed to fetch store profile", error);
@@ -49,9 +80,99 @@ export default function StoreProfilePage() {
     fetchStoreProfile();
   }, []);
 
+  // 1. Fetch Provinces
+  useEffect(() => {
+    if (!isEditing) return;
+    const fetchProvinces = async () => {
+      setIsLoadingRegions(prev => ({ ...prev, provinces: true }));
+      try {
+        const API_PROVINCE = "/regional-api/provinces"; 
+        const response = await fetch(API_PROVINCE);
+        const res = await response.json();
+        setProvinces(res.data || []);
+      } catch (error) {
+        console.error("Gagal mengambil data provinsi", error);
+      } finally {
+        setIsLoadingRegions(prev => ({ ...prev, provinces: false }));
+      }
+    };
+    if (provinces.length === 0) fetchProvinces();
+  }, [isEditing]);
+
+  // 2. Fetch Cities saat Province berubah
+  useEffect(() => {
+    if (formData.provinceId) {
+      const fetchCities = async () => {
+        setIsLoadingRegions(prev => ({ ...prev, cities: true }));
+        try {
+          const API_CITY = `/regional-api/cities/${formData.provinceId}`; 
+          const response = await fetch(API_CITY);
+          const res = await response.json();
+          setCities(res.data || []);
+        } catch (error) {
+          console.error("Gagal mengambil data kota", error);
+        } finally {
+          setIsLoadingRegions(prev => ({ ...prev, cities: false }));
+        }
+      };
+      fetchCities();
+    } else {
+      setCities([]);
+    }
+  }, [formData.provinceId]);
+
+  // 3. Fetch Districts saat City berubah
+  useEffect(() => {
+    if (formData.cityId) {
+      const fetchDistricts = async () => {
+        setIsLoadingRegions(prev => ({ ...prev, districts: true }));
+        try {
+          const API_DISTRICT = `/regional-api/districts/${formData.cityId}`; 
+          const response = await fetch(API_DISTRICT);
+          const res = await response.json();
+          setDistricts(res.data || []);
+        } catch (error) {
+          console.error("Gagal mengambil data kecamatan", error);
+        } finally {
+          setIsLoadingRegions(prev => ({ ...prev, districts: false }));
+        }
+      };
+      fetchDistricts();
+    } else {
+      setDistricts([]);
+    }
+  }, [formData.cityId]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Jika provinsi berubah, ambil nama provinsi & reset kota dan kecamatan
+      if (name === "provinceId") {
+        const selectedProv = provinces.find(p => p.id.toString() === value);
+        newData.provinceName = selectedProv ? selectedProv.name : "";
+        newData.cityId = "";
+        newData.cityName = "";
+        newData.districtId = "";
+        newData.districtName = "";
+      } 
+      // Jika kota berubah, ambil nama kota & reset kecamatan
+      else if (name === "cityId") {
+        const selectedCity = cities.find(c => c.id.toString() === value);
+        newData.cityName = selectedCity ? selectedCity.name : "";
+        newData.districtId = "";
+        newData.districtName = "";
+      }
+      // Jika kecamatan berubah, ambil nama kecamatan
+      else if (name === "districtId") {
+        const selectedDist = districts.find(d => d.id.toString() === value);
+        newData.districtName = selectedDist ? selectedDist.name : "";
+      }
+      
+      return newData;
+    });
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +202,15 @@ export default function StoreProfilePage() {
       } 
       
       // Update form text data
-      const res = await axios.put(`/api/seller/store/update`, formData, {
+      const submitData = { ...formData };
+      
+      // Jika user mengisi lokasi baru menggunakan form region
+      if (formData.provinceId && formData.cityId && formData.districtId && formData.addressDetail) {
+        submitData.address = `${formData.addressDetail}, Kec. ${formData.districtName}, ${formData.cityName}, Prov. ${formData.provinceName}`;
+        submitData.city = formData.cityName;
+      }
+
+      const res = await axios.put(`/api/seller/store/update`, submitData, {
         withCredentials: true 
       });
 
@@ -276,27 +405,107 @@ export default function StoreProfilePage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[14px] font-medium text-on-surface mb-2">Kota</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                    required
-                  />
-                </div>
+                <div className="pt-2 border-t border-outline-variant/30 mt-4">
+                  <div className="mb-4">
+                    <h3 className="text-[14px] font-bold text-on-surface">Ubah Lokasi Toko</h3>
+                    <p className="text-[12px] text-on-surface-variant">Biarkan kosong jika tidak ingin mengubah lokasi saat ini ({formData.city}).</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Province */}
+                    <div className="space-y-2">
+                      <label htmlFor="provinceId" className="text-[12px] font-semibold text-on-surface-variant flex justify-between">
+                        Provinsi
+                        {isLoadingRegions.provinces && <span className="text-[10px] text-primary animate-pulse">Memuat...</span>}
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="provinceId"
+                          name="provinceId"
+                          disabled={isLoadingRegions.provinces}
+                          value={formData.provinceId}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer disabled:opacity-60"
+                        >
+                          <option value="">Pilih Provinsi</option>
+                          {provinces.map((prov) => (
+                            <option key={prov.id} value={prov.id}>{prov.name}</option>
+                          ))}
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[20px]">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-[14px] font-medium text-on-surface mb-2">Alamat Lengkap</label>
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    rows={2}
-                    className="w-full px-4 py-3 rounded-xl border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors resize-none"
-                  />
+                    {/* City */}
+                    <div className="space-y-2">
+                      <label htmlFor="cityId" className="text-[12px] font-semibold text-on-surface-variant flex justify-between">
+                        Kota / Kabupaten
+                        {isLoadingRegions.cities && <span className="text-[10px] text-primary animate-pulse">Memuat...</span>}
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="cityId"
+                          name="cityId"
+                          disabled={!formData.provinceId || isLoadingRegions.cities}
+                          value={formData.cityId}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer disabled:opacity-60"
+                        >
+                          <option value="">Pilih Kota/Kabupaten</option>
+                          {cities.map((city) => (
+                            <option key={city.id} value={city.id}>{city.name}</option>
+                          ))}
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[20px]">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* District */}
+                    <div className="space-y-2">
+                      <label htmlFor="districtId" className="text-[12px] font-semibold text-on-surface-variant flex justify-between">
+                        Kecamatan
+                        {isLoadingRegions.districts && <span className="text-[10px] text-primary animate-pulse">Memuat...</span>}
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="districtId"
+                          name="districtId"
+                          disabled={!formData.cityId || isLoadingRegions.districts}
+                          value={formData.districtId}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer disabled:opacity-60"
+                        >
+                          <option value="">Pilih Kecamatan</option>
+                          {districts.map((dist) => (
+                            <option key={dist.id} value={dist.id}>{dist.name}</option>
+                          ))}
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[20px]">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Address Detail */}
+                    <div className="space-y-2">
+                      <label htmlFor="addressDetail" className="text-[12px] font-semibold text-on-surface-variant">
+                        Detail Alamat Lengkap
+                      </label>
+                      <textarea
+                        id="addressDetail"
+                        name="addressDetail"
+                        rows={2}
+                        value={formData.addressDetail}
+                        onChange={handleInputChange}
+                        placeholder="Nama jalan, gedung, nomor rumah, RT/RW, dan patokan"
+                        className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-outline-variant resize-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
