@@ -27,7 +27,7 @@ interface AuthContextType {
   login: (email?: string, password?: string) => Promise<void>;
   register: (name: string, phone_number: string, email: string, password: string) => Promise<void>;
   googleLogin: () => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 /* ──────────────────────────── Helper ──────────────────────────── */
@@ -74,7 +74,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   googleLogin() {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 /* ──────────────────────────── Provider ──────────────────────────── */
@@ -228,13 +228,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Clear client-side state immediately so UI reflects logout
     setUser(null);
     localStorage.removeItem("user");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
-    // Fire-and-forget logout request to clear server-side session/cookies
-    axios.post(`${API_URL}/api/auth/logout`).catch(() => {});
+
+    // Await the server logout to clear the session cookie BEFORE any redirect.
+    // Otherwise the next /api/auth/me call would still see a valid session
+    // and re-log the user back in.
+    try {
+      await axios.post(`${API_URL}/api/auth/logout`);
+    } catch {
+      // Server unreachable is non-fatal — local state is already cleared
+    }
   }, []);
 
   const value: AuthContextType = {
