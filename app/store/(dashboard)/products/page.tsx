@@ -152,7 +152,8 @@ export default function StoreProductsPage() {
       const url = img.image_url || img.url || img.path || (typeof img === "string" ? img : null);
       if (url) {
         if (url.startsWith("http")) return url;
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        // const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
         return url.startsWith("/") ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
       }
     }

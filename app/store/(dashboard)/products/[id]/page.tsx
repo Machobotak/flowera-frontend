@@ -497,7 +497,7 @@ export default function ProductFormPage() {
                   className="relative group aspect-square rounded-xl overflow-hidden border-2 border-outline-variant/20 hover:border-primary/40 transition-all"
                 >
                   <img
-                    src={img.preview}
+                    src={`${process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE}${img.preview}`}
                     alt={`Preview ${index + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {

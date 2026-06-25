@@ -102,7 +102,8 @@ export default function StoreProfilePage() {
   const getImageUrl = (path: string | null) => {
     if (!path) return "https://ui-avatars.com/api/?name=Store&background=random";
     if (path.startsWith("http")) return path;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    // const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://localhost:3000";
     return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
   };
 
