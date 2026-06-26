@@ -1,24 +1,28 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context";
 
-const FOOTER_LINKS = {
-  information: [
-    { label: "About Us", href: "#" },
-    { label: "Delivery Info", href: "#" },
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Service", href: "#" },
-  ],
-  partners: [
-    { label: "Florist Partners", href: "#" },
-    { label: "Sell on Flowera", href: "#" },
-    { label: "Affiliate Program", href: "#" },
-  ],
-};
+const INFORMATION_LINKS = [
+  { label: "About Us", href: "/coming-soon" },
+  { label: "Delivery Info", href: "/coming-soon" },
+  { label: "Privacy Policy", href: "/coming-soon" },
+  { label: "Terms of Service", href: "/coming-soon" },
+];
+
+const PARTNER_LINKS = [
+  { label: "Florist Partners", href: "/coming-soon" },
+  { label: "Affiliate Program", href: "/coming-soon" },
+];
 
 const SOCIAL_ICONS = ["face_nod", "photo_camera", "share"];
 
 export default function Footer() {
+  const { user } = useAuth();
+  const isSeller = user?.roles?.includes("seller");
+  const sellHref = isSeller ? "/store" : "/store/create";
+
   return (
     <footer className="bg-surface-container-low dark:bg-surface-container-high w-full pt-stack-lg pb-stack-md mt-stack-lg border-t border-outline-variant/30">
       <div className="flex flex-col items-center justify-center px-margin-desktop w-full max-w-container-max mx-auto">
@@ -37,32 +41,36 @@ export default function Footer() {
 
           {/* Information Links */}
           <div className="col-span-1 flex flex-col gap-3">
-            <h6 className="font-label-md text-secondary uppercase">
-              Information
-            </h6>
-            {FOOTER_LINKS.information.map((link) => (
-              <a
+            <h6 className="font-label-md text-secondary uppercase">Information</h6>
+            {INFORMATION_LINKS.map((link) => (
+              <Link
                 key={link.label}
                 className="text-on-surface-variant hover:text-primary transition-colors"
                 href={link.href}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
 
           {/* Partner Links */}
           <div className="col-span-1 flex flex-col gap-3">
             <h6 className="font-label-md text-secondary uppercase">Partners</h6>
-            {FOOTER_LINKS.partners.map((link) => (
-              <a
+            {PARTNER_LINKS.map((link) => (
+              <Link
                 key={link.label}
                 className="text-on-surface-variant hover:text-primary transition-colors"
                 href={link.href}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
+            <Link
+              className="text-on-surface-variant hover:text-primary transition-colors"
+              href={sellHref}
+            >
+              {isSeller ? "Seller Centre" : "Sell on Flowera"}
+            </Link>
           </div>
 
           {/* Newsletter */}
@@ -82,13 +90,13 @@ export default function Footer() {
             </div>
             <div className="flex gap-4 pt-2">
               {SOCIAL_ICONS.map((icon) => (
-                <a
+                <Link
                   key={icon}
                   className="text-on-surface-variant hover:text-primary transition-colors"
-                  href="#"
+                  href="/coming-soon"
                 >
                   <span className="material-symbols-outlined">{icon}</span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
