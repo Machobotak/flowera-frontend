@@ -5,87 +5,8 @@ import Link from "next/link";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
-
-// ─── Delete Confirmation Modal ───
-function DeleteModal({
-  product,
-  onConfirm,
-  onCancel,
-  isDeleting,
-  deleteError,
-}: {
-  product: any;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isDeleting: boolean;
-  deleteError: string | null;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.15s_ease]"
-        onClick={!isDeleting ? onCancel : undefined}
-      />
-      {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full animate-[slideUp_0.2s_ease]">
-        <div className="flex flex-col items-center text-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-error-container flex items-center justify-center">
-            <span
-              className="material-symbols-outlined text-[28px] text-error"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              delete
-            </span>
-          </div>
-          <div>
-            <h3 className="text-[18px] font-bold text-on-surface">Hapus Produk?</h3>
-            <p className="text-[13px] text-on-surface-variant mt-1">
-              Produk{" "}
-              <span className="font-semibold text-on-surface">"{product.name}"</span>{" "}
-              akan dihapus secara permanen dan tidak bisa dikembalikan.
-            </p>
-          </div>
-
-          {/* Error message inside modal */}
-          {deleteError && (
-            <div className="w-full flex items-start gap-2 p-3 bg-error-container rounded-xl text-left">
-              <span className="material-symbols-outlined text-[18px] text-error shrink-0 mt-0.5">error</span>
-              <p className="text-[12px] text-on-error-container">{deleteError}</p>
-            </div>
-          )}
-
-          <div className="flex gap-3 w-full">
-            <button
-              onClick={onCancel}
-              disabled={isDeleting}
-              className="flex-1 py-3 border border-outline-variant/40 text-on-surface font-semibold text-[14px] rounded-xl hover:bg-surface-container transition-colors disabled:opacity-50"
-            >
-              Batal
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={isDeleting}
-              className="flex-1 py-3 bg-error text-white font-semibold text-[14px] rounded-xl hover:bg-error/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isDeleting ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                  Menghapus...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                  {deleteError ? "Coba Lagi" : "Hapus"}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { DeleteConfirmModal } from "@/components/seller-product";
+import { getProductImageUrl } from "@/utils/image-url";
 
 export default function StoreProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -151,35 +72,22 @@ export default function StoreProductsPage() {
     }
   };
 
-  const getImageUrl = (product: any) => {
-    const images = product.product_image || product.images;
-    if (images && images.length > 0) {
-      // Prioritaskan gambar yang di-set sebagai default cover
-      const img = images.find((i: any) => i.isDefault || i.is_default) || images[0];
-      const url = img.image_url || img.url || img.path || (typeof img === "string" ? img : null);
-      if (url) {
-        if (url.startsWith("http")) return url;
-        const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-        return url.startsWith("/") ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
-      }
-    }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || "P")}&background=8c4a5c&color=fff`;
-  };
-
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* Delete Confirmation Modal */}
-      {productToDelete && (
-        <DeleteModal
-          product={productToDelete}
-          onConfirm={confirmDelete}
-          onCancel={closeDeleteModal}
-          isDeleting={isDeleting}
-          deleteError={deleteError}
-        />
-      )}
+      <DeleteConfirmModal
+        isOpen={!!productToDelete}
+        title="Hapus Produk?"
+        itemName={productToDelete?.name || ""}
+        description="Produk"
+        isDeleting={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+        confirmLabel={deleteError ? "Coba Lagi" : "Hapus"}
+        error={deleteError}
+      />
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -224,7 +132,7 @@ export default function StoreProductsPage() {
                   {/* Thumbnail */}
                   <div className="h-48 overflow-hidden relative bg-surface-container">
                     <img
-                      src={getImageUrl(product)}
+                      src={getProductImageUrl(product)}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
