@@ -50,11 +50,27 @@ export default function ProductFormPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ─── Toast state ───
+  interface Toast {
+    id: number;
+    message: string;
+    type: "error" | "success";
+  }
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastIdRef = useRef(0);
+
+  const addToast = useCallback((message: string, type: Toast["type"] = "error") => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }, []);
+
   // ─── Page state ───
   const [isLoadingProduct, setIsLoadingProduct] = useState(isEditMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStep, setSubmitStep] = useState<"idle" | "saving" | "uploading" | "setting_cover" | "creating_variants" | "done">("idle");
-  const [error, setError] = useState<string | null>(null);
 
   // ─── Default cover state ───
   const [defaultImageId, setDefaultImageId] = useState<string | null>(null);
@@ -136,7 +152,7 @@ export default function ProductFormPage() {
           // Variant fetch is non-fatal — variants just won't pre-populate
         }
       } catch (err: any) {
-        setError(err.message || "Gagal memuat data produk");
+        addToast(err.message || "Gagal memuat data produk", "error");
       } finally {
         setIsLoadingProduct(false);
       }
@@ -323,7 +339,7 @@ export default function ProductFormPage() {
         }
       } catch (err: any) {
         const msg = err.response?.data?.message || err.message || "Gagal memperbarui varian";
-        setError(msg);
+        addToast(msg, "error");
         setIsSavingVariant(null);
         return;
       }
@@ -364,7 +380,7 @@ export default function ProductFormPage() {
         });
       } catch (err: any) {
         const msg = err.response?.data?.message || err.message || "Gagal menghapus varian";
-        setError(msg);
+        addToast(msg, "error");
         setIsSavingVariant(null);
         return;
       }
@@ -396,7 +412,7 @@ export default function ProductFormPage() {
       );
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Gagal mengatur foto cover";
-      setError(msg);
+      addToast(msg, "error");
     } finally {
       setSettingCoverId(null);
     }
@@ -405,10 +421,8 @@ export default function ProductFormPage() {
   // ─── Submit ───
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    if (!name.trim()) return setError("Nama produk harus diisi");
-    if (!price || parseInt(price) <= 0) return setError("Harga produk harus lebih dari 0");
+    if (!name.trim()) { addToast("Nama produk harus diisi", "error"); return; }
+    if (!price || parseInt(price) <= 0) { addToast("Harga produk harus lebih dari 0", "error"); return; }
 
     setIsSubmitting(true);
 
@@ -521,7 +535,7 @@ export default function ProductFormPage() {
     } catch (err: any) {
       const message =
         err.response?.data?.message || err.message || "Gagal menyimpan produk. Silakan coba lagi.";
-      setError(message);
+      addToast(message, "error");
       setSubmitStep("idle");
       setIsSubmitting(false);
     }
@@ -616,21 +630,42 @@ export default function ProductFormPage() {
         </div>
       </div>
 
-      {/* Error Alert */}
-      {error && (
-        <div className="flex items-start gap-3 p-4 bg-error-container rounded-xl border border-error/20 animate-[fadeIn_0.2s_ease]">
-          <span className="material-symbols-outlined text-[20px] text-error mt-0.5">error</span>
-          <div>
-            <p className="text-[14px] font-semibold text-on-error-container">Terjadi Kesalahan</p>
-            <p className="text-[13px] text-on-error-container/80">{error}</p>
-          </div>
-          <button onClick={() => setError(null)} className="ml-auto">
-            <span className="material-symbols-outlined text-[18px] text-on-error-container/60 hover:text-on-error-container">
-              close
+      {/* Toast Container — fixed top-right, di luar layout stacking */}
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-xl border animate-[fadeIn_0.3s_ease] ${
+              toast.type === "error"
+                ? "bg-error-container border-error/20"
+                : "bg-secondary-container border-secondary/20"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[20px] mt-0.5 ${
+                toast.type === "error" ? "text-error" : "text-secondary"
+              }`}
+              style={toast.type === "success" ? { fontVariationSettings: "'FILL' 1" } : {}}
+            >
+              {toast.type === "error" ? "error" : "check_circle"}
             </span>
-          </button>
-        </div>
-      )}
+            <div className="flex-1 min-w-0">
+              <p className={`text-[13px] font-semibold ${toast.type === "error" ? "text-on-error-container" : "text-on-secondary-container"}`}>
+                {toast.type === "error" ? "Terjadi Kesalahan" : "Berhasil"}
+              </p>
+              <p className={`text-[12px] ${toast.type === "error" ? "text-on-error-container/80" : "text-on-secondary-container/80"}`}>
+                {toast.message}
+              </p>
+            </div>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              className={`shrink-0 ${toast.type === "error" ? "text-on-error-container/60 hover:text-on-error-container" : "text-on-secondary-container/60 hover:text-on-secondary-container"}`}
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+        ))}
+      </div>
 
       {/* Success Alert */}
       {submitStep === "done" && (
@@ -704,7 +739,7 @@ export default function ProductFormPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         {/* ─── Product Info Card ─── */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-soft border border-outline-variant/20">
           <div className="flex items-center gap-3 mb-6">
