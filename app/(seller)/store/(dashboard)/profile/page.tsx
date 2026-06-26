@@ -194,7 +194,6 @@ export default function StoreProfilePage() {
         uploadData.append("file", logoFile); // TODO: Sesuaikan dengan key yang diminta backend
 
         const uploadRes = await axios.post(`/api/seller/store/upload/logo`, uploadData, {
-          headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         });
 

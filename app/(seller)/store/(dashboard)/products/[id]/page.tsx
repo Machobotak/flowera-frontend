@@ -439,7 +439,6 @@ export default function ProductFormPage() {
           const formData = new FormData();
           newImages.forEach((img) => formData.append("files", img.file!));
           await axios.post(`/api/seller/product/${productId}/images`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
             withCredentials: true,
           });
         }
@@ -465,7 +464,6 @@ export default function ProductFormPage() {
           const formData = new FormData();
           newFiles.forEach((img) => formData.append("files", img.file!));
           const uploadRes = await axios.post(`/api/seller/product/${activeProductId}/images`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
             withCredentials: true,
           });
 
