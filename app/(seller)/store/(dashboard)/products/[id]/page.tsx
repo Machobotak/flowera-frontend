@@ -553,7 +553,7 @@ export default function ProductFormPage() {
   // ─── Loading skeleton ───
   if (isLoadingProduct) {
     return (
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6 max-w-3xl mx-auto">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-surface-container animate-pulse" />
           <div className="space-y-2">
@@ -574,7 +574,7 @@ export default function ProductFormPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
