@@ -308,15 +308,17 @@ export default function ProductFormPage() {
 
         // 2) Upload new image if any (FormData — file only, seperti curl)
         if (editVariantImage) {
+          console.log(
+            `📤 Update gambar varian "${updatedTitle}":`,
+            editVariantImage.name,
+            `(${(editVariantImage.size / 1024).toFixed(1)} KB)`
+          );
           const fileFormData = new FormData();
           fileFormData.append("file", editVariantImage);
           await axios.put(
             `/api/seller/product-variant/update/${target.backendId}`,
             fileFormData,
-            {
-              headers: { "Content-Type": "multipart/form-data" },
-              withCredentials: true,
-            }
+            { withCredentials: true }
           );
         }
       } catch (err: any) {
@@ -500,14 +502,18 @@ export default function ProductFormPage() {
           formData.append("product_id", String(activeProductId));
           if (variant.imageFile) {
             formData.append("file", variant.imageFile);
+            console.log(
+              `📤 Upload varian "${variant.title}" dengan gambar:`,
+              variant.imageFile.name,
+              `(${(variant.imageFile.size / 1024).toFixed(1)} KB)`
+            );
+          } else {
+            console.log(`📤 Upload varian "${variant.title}" TANPA gambar`);
           }
           await axios.post(
             "/api/seller/product-variant/create",
             formData,
-            {
-              headers: { "Content-Type": "multipart/form-data" },
-              withCredentials: true,
-            }
+            { withCredentials: true }
           );
         }
       }
