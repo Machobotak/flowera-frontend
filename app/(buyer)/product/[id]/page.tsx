@@ -33,8 +33,14 @@ interface ProductVariant {
 
 interface AddonProduct {
   id: number;
-  name: string;
+  title?: string;
+  name?: string;
   price: number;
+  image_url?: string;
+  product_image?: Array<{
+    id: number;
+    image_url: string;
+  }>;
   [key: string]: any;
 }
 
@@ -75,6 +81,18 @@ const getVariantImageUrl = (variant: ProductVariant): string | null => {
   if (images && images.length > 0) {
     const img = images[0];
     const path = img.image_url;
+    if (path) return getImageUrl(path);
+  }
+  return null;
+};
+
+const getAddonImageUrl = (addon: AddonProduct): string | null => {
+  // Cek image_url langsung
+  if (addon.image_url) return getImageUrl(addon.image_url);
+  // Cek product_image array (struktur dari backend)
+  const images = addon.product_image;
+  if (images && images.length > 0) {
+    const path = images[0].image_url;
     if (path) return getImageUrl(path);
   }
   return null;
@@ -590,22 +608,44 @@ export default function ProductDetailPage() {
 
             {/* Addons */}
             {addons.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h3 className="text-[14px] font-semibold text-on-surface">Tambahan (Add-on)</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {addons.map((a) => {
                     const isSelected = selectedAddons.some((addon) => addon.id === a.id);
+                    const addonImg = getAddonImageUrl(a);
                     return (
                       <button
                         key={a.id}
                         onClick={() => toggleAddon(a)}
-                        className={`px-4 py-2 border rounded-lg text-[13px] font-medium transition-colors ${
+                        className={`flex items-center gap-3 p-2 border rounded-xl transition-all ${
                           isSelected
-                            ? "border-secondary bg-secondary/10 text-secondary"
-                            : "border-outline-variant/30 text-on-surface hover:border-secondary hover:text-secondary"
+                            ? "border-secondary bg-secondary/10 ring-2 ring-secondary/20"
+                            : "border-outline-variant/30 bg-white hover:border-secondary hover:shadow-sm"
                         }`}
                       >
-                        + {a.title || a.name} {a.subTitle ? `(${a.subTitle})` : ""}
+                        {addonImg ? (
+                          <img
+                            src={addonImg}
+                            alt={a.title || a.name || "Addon"}
+                            className="w-12 h-12 rounded-lg object-cover shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[20px] text-outline">add_circle</span>
+                          </div>
+                        )}
+                        <div className="text-left">
+                          <p className="text-[13px] font-semibold text-on-surface leading-tight">
+                            {a.title || a.name}
+                          </p>
+                          <p className="text-[12px] font-bold text-secondary mt-0.5">
+                            +Rp {a.price.toLocaleString("id-ID")}
+                          </p>
+                        </div>
                       </button>
                     );
                   })}
@@ -641,15 +681,30 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* Selected Addons */}
-                {selectedAddons.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex justify-between font-body text-[14px] leading-6 text-on-surface-variant"
-                  >
-                    <span>{a.title || a.name}</span>
-                    <span>+Rp {a.price.toLocaleString("id-ID")}</span>
-                  </div>
-                ))}
+                {selectedAddons.map((a) => {
+                  const addonImg = getAddonImageUrl(a);
+                  return (
+                    <div
+                      key={a.id}
+                      className="flex justify-between items-center font-body text-[14px] leading-6 text-on-surface-variant"
+                    >
+                      <span className="flex items-center gap-2">
+                        {addonImg && (
+                          <img
+                            src={addonImg}
+                            alt={a.title || a.name || "Addon"}
+                            className="w-8 h-8 rounded-md object-cover shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        )}
+                        {a.title || a.name}
+                      </span>
+                      <span>+Rp {a.price.toLocaleString("id-ID")}</span>
+                    </div>
+                  );
+                })}
 
                 {selectedAddons.length > 0 && <hr className="border-outline-variant/30" />}
 
