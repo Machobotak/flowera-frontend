@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -374,6 +376,7 @@ export default function ProductDetailPage() {
   const [addons, setAddons] = useState<AddonProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
 
   // Selection state
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -404,7 +407,7 @@ export default function ProductDetailPage() {
       }
     } catch (err) {
       setError(true);
-      console.error("Gagal mengambil data produk:", err);
+      addToast("Gagal memuat data produk.", "error");
     } finally {
       setLoading(false);
     }
@@ -438,6 +441,7 @@ export default function ProductDetailPage() {
 
   return (
     <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* ── Breadcrumb ── */}
       <nav className="flex items-center gap-2 text-[12px] leading-4 tracking-[0.03em] font-medium text-on-surface-variant">
         <Link className="hover:text-primary transition-colors" href="/">

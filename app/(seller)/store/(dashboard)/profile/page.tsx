@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 interface Region {
   id: string | number; 
@@ -12,6 +14,8 @@ export default function StoreProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
+
+  const { toasts, addToast, removeToast } = useToast();
 
   // Logo upload state
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -219,13 +223,13 @@ export default function StoreProfilePage() {
         setIsEditing(false);
         setLogoFile(null);
         setLogoPreview(null);
-        
-        // Memaksa reload halaman agar Navbar di atas (yang ada di layout) juga memperbarui gambarnya
-        // dan agar browser tidak mengambil cache dari URL gambar yang lama
-        window.location.reload();
+        addToast("Profil toko berhasil diperbarui", "success");
+        // Delay reload agar toast sempat terlihat
+        setTimeout(() => window.location.reload(), 800);
       }
-    } catch (error) {
-      console.error("Gagal mengupdate profil toko", error);
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || "Gagal mengupdate profil toko";
+      addToast(msg, "error");
     }
   };
 
@@ -249,6 +253,7 @@ export default function StoreProfilePage() {
 
   return (
     <div className="space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-headline font-bold text-[24px] text-on-surface">Profil Toko</h2>
