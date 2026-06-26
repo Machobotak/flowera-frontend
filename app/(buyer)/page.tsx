@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ProductCard from "@/components/cards/product-card";
 import FloristCard from "@/components/cards/florist-card";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 /* ──────────────────────────── Data ──────────────────────────── */
 
@@ -91,6 +93,7 @@ function HeroCarousel() {
 
 function ExploreSection() {
   const [activeTab, setActiveTab] = useState<"products" | "florists">("products");
+  const { toasts, addToast, removeToast } = useToast();
 
   // State untuk menyimpan data dari backend
   const [categories, setCategories] = useState<any[]>([]);
@@ -106,7 +109,6 @@ function ExploreSection() {
         const API_URL = "/api/user/home";
         // Menambahkan parameter 't' dengan timestamp mencegah browser melakukan cache pada data yang diambil
         const res = await axios.get(`${API_URL}?t=${new Date().getTime()}`);
-        console.log(res);
 
         // Gunakan data dari endpoint backend
         const data = res.data;
@@ -115,7 +117,7 @@ function ExploreSection() {
         setProducts(data.product || []);
         setFlorists(data.store || []);
       } catch (error) {
-        console.error("Gagal mengambil data home:", error);
+        addToast("Gagal memuat data beranda. Silakan coba lagi.", "error");
       }
     };
 
@@ -139,8 +141,7 @@ function ExploreSection() {
         const data: any[] = res.data?.data ?? res.data ?? [];
         if (!cancelled) setCategoryProducts(data);
       } catch (error) {
-        console.error("Gagal mengambil produk berdasarkan kategori:", error);
-        if (!cancelled) setCategoryProducts([]);
+        if (!cancelled) { addToast("Gagal memuat produk kategori.", "error"); setCategoryProducts([]); }
       } finally {
         if (!cancelled) setIsLoadingCategory(false);
       }
@@ -179,6 +180,7 @@ function ExploreSection() {
 
   return (
     <section className="space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* Category Chips - Only for products */}
       {activeTab === "products" && (
         <div className="flex flex-col gap-4 mb-8">

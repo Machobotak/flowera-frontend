@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 // Anda bisa menyesuaikan tipe ini dengan struktur response API Anda
 interface Region {
@@ -11,6 +13,7 @@ interface Region {
 
 export default function CreateStorePage() {
   const router = useRouter();
+  const { toasts, addToast, removeToast } = useToast();
   
   // Form State
   const [formData, setFormData] = useState({
@@ -189,9 +192,9 @@ export default function CreateStorePage() {
       // Menggunakan window.location.href agar halaman termuat ulang 
       // dan AuthContext mengambil data user terbaru yang sudah memiliki role 'seller'
       window.location.href = "/store";
-    } catch (error) {
-      console.error("Terjadi kesalahan:", error);
-      alert("Gagal membuat toko. Silakan coba lagi.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || "Gagal membuat toko. Silakan coba lagi.";
+      addToast(msg, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -199,6 +202,7 @@ export default function CreateStorePage() {
 
   return (
     <main className="min-h-[80vh] flex items-center justify-center py-12 px-margin-mobile md:px-margin-desktop bg-surface">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="w-full max-w-2xl bg-white rounded-3xl shadow-soft border border-outline-variant/20 p-8 md:p-12">
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-primary-container rounded-2xl flex items-center justify-center mx-auto mb-4">

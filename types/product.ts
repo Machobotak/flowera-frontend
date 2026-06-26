@@ -47,13 +47,40 @@ export interface ProductVariantData {
   updatedAt?: string;
 }
 
-/** Local form state for a variant (price kept as string for input handling) */
-export interface VariantFormEntry {
+/** Base interface for sub-entity form entries (variant, addon) */
+export interface SubEntityItem {
   localId: string; // temp client-side ID for React keys
   title: string;
-  sub_title: string;
   price: string;
   backendId?: number; // populated after save or when loaded from server
-  imageFile?: File;   // new image to upload (only for create/update)
+  imageFile?: File; // new image to upload
   imagePreview?: string; // object URL for preview
+}
+
+/** Local form state for a variant (price kept as string for input handling) */
+export interface VariantFormEntry extends SubEntityItem {
+  sub_title: string;
+}
+
+/* ──────────────────────────── Product Addon Types ──────────────────────────── */
+
+export interface ProductAddonPayload {
+  title: string;
+  price: number;
+  product_id: number;
+}
+
+export interface ProductAddonData {
+  id: number;
+  title: string;
+  price: number;
+  product_id: number;
+  image_url?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Local form state for an addon (price kept as string for input handling) */
+export interface AddonFormEntry extends SubEntityItem {
+  // no extra fields beyond base SubEntityItem
 }

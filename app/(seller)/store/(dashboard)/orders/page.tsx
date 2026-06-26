@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 // Mock data for orders
 const MOCK_ORDERS = [
@@ -24,17 +26,19 @@ const MOCK_ORDERS = [
 
 export default function StoreOrdersPage() {
   const [orders, setOrders] = useState(MOCK_ORDERS);
+  const { toasts, addToast, removeToast } = useToast();
 
   const handleProcessOrder = (id: string) => {
     // Simulasi memproses pesanan
-    setOrders(orders.map(order => 
+    setOrders(orders.map(order =>
       order.id === id ? { ...order, status: "Sedang Diproses" } : order
     ));
-    alert(`Pesanan ${id} sedang diproses!`);
+    addToast(`Pesanan ${id} sedang diproses!`, "success");
   };
 
   return (
     <div className="space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex items-center justify-between">
         <h2 className="font-headline text-[24px] font-semibold text-on-surface">Pesanan Masuk</h2>
         <div className="flex gap-2">

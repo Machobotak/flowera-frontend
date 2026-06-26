@@ -4,6 +4,8 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
@@ -23,17 +25,16 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
     try {
       await login(email, password);
       window.location.href = redirectTo;
     } catch (err: any) {
-      setError(err.message || "Email atau password salah.");
+      addToast(err.message || "Email atau password salah.", "error");
       setIsLoading(false);
     }
   };
@@ -59,18 +60,7 @@ function LoginPageContent() {
             </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-error-container/20 border border-error/20 rounded-xl px-4 py-3 flex items-start gap-3 text-error">
-              <span className="material-symbols-outlined text-error text-[20px] mt-0.5" style={FILL_STYLE}>
-                error
-              </span>
-              <div>
-                <p className="text-[13px] font-semibold text-error">Gagal Masuk</p>
-                <p className="text-[12px] text-error-container mt-0.5">{error}</p>
-              </div>
-            </div>
-          )}
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
 
           {/* Social login */}
           <div className="space-y-3">
@@ -97,7 +87,7 @@ function LoginPageContent() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {/* Email */}
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-on-surface block">
