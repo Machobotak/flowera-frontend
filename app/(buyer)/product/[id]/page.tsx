@@ -241,7 +241,8 @@ export default function ProductDetailPage() {
                         }`}
                       >
                         {variantImg ? (
-                          <img src={variantImg} alt={v.title} className="w-12 h-12 rounded-lg object-cover shrink-0"
+                          <img src={variantImg} alt={v.title} loading="lazy" decoding="async"
+                            className="w-12 h-12 rounded-lg object-cover shrink-0"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
@@ -279,7 +280,8 @@ export default function ProductDetailPage() {
                         }`}
                       >
                         {addonImg ? (
-                          <img src={addonImg} alt={a.title || a.name || "Addon"} className="w-12 h-12 rounded-lg object-cover shrink-0"
+                          <img src={addonImg} alt={a.title || a.name || "Addon"} loading="lazy" decoding="async"
+                            className="w-12 h-12 rounded-lg object-cover shrink-0"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
@@ -327,7 +329,8 @@ export default function ProductDetailPage() {
                     <div key={a.id} className="flex justify-between items-center font-body text-[14px] leading-6 text-on-surface-variant">
                       <span className="flex items-center gap-2">
                         {addonImg && (
-                          <img src={addonImg} alt={a.title || a.name || "Addon"} className="w-8 h-8 rounded-md object-cover shrink-0"
+                          <img src={addonImg} alt={a.title || a.name || "Addon"} loading="lazy" decoding="async"
+                            className="w-8 h-8 rounded-md object-cover shrink-0"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         )}
                         {a.title || a.name}

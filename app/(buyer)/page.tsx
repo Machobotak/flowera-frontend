@@ -109,7 +109,6 @@ function ExploreSection() {
         const API_URL = "/api/user/home";
         // Menambahkan parameter 't' dengan timestamp mencegah browser melakukan cache pada data yang diambil
         const res = await axios.get(`${API_URL}?t=${new Date().getTime()}`);
-        console.log(res);
 
         // Gunakan data dari endpoint backend
         const data = res.data;

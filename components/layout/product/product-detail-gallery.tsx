@@ -199,6 +199,8 @@ export default function ProductDetailGallery({
                 className="w-full h-full object-cover"
                 src={item.imageUrl}
                 alt={item.label}
+                loading="lazy"
+                decoding="async"
               />
               {!item.isProduct && (
                 <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-tertiary" />
