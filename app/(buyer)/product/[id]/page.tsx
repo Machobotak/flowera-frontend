@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
@@ -18,8 +18,14 @@ interface ProductImage {
 
 interface ProductVariant {
   id: number;
-  name: string;
+  title: string;
+  subTitle?: string;
   price: number;
+  product_image?: Array<{
+    id: number;
+    image_url: string;
+    isDefault?: number;
+  }>;
   [key: string]: any;
 }
 
@@ -59,6 +65,17 @@ const getImageUrl = (path: string | null): string => {
   if (path.startsWith("http")) return path;
   const baseUrl = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
   return path.startsWith("/") ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+};
+
+const getVariantImageUrl = (variant: ProductVariant): string | null => {
+  // Cek product_image array (struktur dari backend: product_image[0].image_url)
+  const images = variant.product_image;
+  if (images && images.length > 0) {
+    const img = images[0];
+    const path = img.image_url;
+    if (path) return getImageUrl(path);
+  }
+  return null;
 };
 
 const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
@@ -164,46 +181,178 @@ function NotFoundState() {
 
 /* ──────────────────────────── Image Gallery ──────────────────────────── */
 
-function ImageGallery({ images, productName }: { images: ProductImage[]; productName: string }) {
-  // Sort: default image first, then by id
+type GalleryItem = {
+  key: string;         // unique key: "prod-{id}" | "var-{variantId}"
+  imageUrl: string;    // full resolved URL
+  label: string;       // alt text
+  isProduct: boolean;  // true = product image, false = variant image
+  variantId?: number;  // only for variant items
+};
+
+function ImageGallery({
+  images,
+  productName,
+  variants,
+  selectedVariantId,
+  onSelectVariant,
+}: {
+  images: ProductImage[];
+  productName: string;
+  variants: ProductVariant[];
+  selectedVariantId?: number | null;
+  onSelectVariant?: (variant: ProductVariant) => void;
+}) {
+  // Build combined gallery: product images first, then variant images
+  const items: GalleryItem[] = [];
+
+  // Product images (sorted: default first)
   const sortedImages = [...images].sort((a, b) => {
     if (a.isDefault !== b.isDefault) return b.isDefault - a.isDefault;
     return a.id - b.id;
   });
+  for (const img of sortedImages) {
+    items.push({
+      key: `prod-${img.id}`,
+      imageUrl: getImageUrl(img.image_url),
+      label: `${productName} - ${img.id}`,
+      isProduct: true,
+    });
+  }
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const selectedImage = sortedImages[selectedIndex] || null;
+  // Variant images (appended after product images)
+  for (const v of variants) {
+    const imgUrl = getVariantImageUrl(v);
+    if (imgUrl) {
+      items.push({
+        key: `var-${v.id}`,
+        imageUrl: imgUrl,
+        label: v.title,
+        isProduct: false,
+        variantId: v.id,
+      });
+    }
+  }
+
+  const [selectedKey, setSelectedKey] = useState<string>(
+    items.length > 0 ? items[0].key : ""
+  );
+
+  // Sync: klik varian dari info panel → gallery ikut pindah
+  useEffect(() => {
+    if (selectedVariantId != null) {
+      const variantItem = items.find(
+        (it) => !it.isProduct && it.variantId === selectedVariantId
+      );
+      if (variantItem) {
+        setSelectedKey(variantItem.key);
+      }
+    }
+    // kalau selectedVariantId null/undefined, biarkan gallery di posisi saat ini
+  }, [selectedVariantId]);
+
+  const selectedItem = items.find((it) => it.key === selectedKey) || items[0];
+
+  // ─── Zoom logic ───
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
+  const zoomImageRef = useRef<HTMLImageElement>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const ZOOM_SCALE = 2.5;
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const img = zoomImageRef.current;
+    const container = zoomContainerRef.current;
+    if (!img || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;  // 0–1
+    const my = (e.clientY - rect.top) / rect.height;  // 0–1
+
+    // Overflow = seberapa banyak gambar zoom melebihi container
+    const overflowX = rect.width * (ZOOM_SCALE - 1);
+    const overflowY = rect.height * (ZOOM_SCALE - 1);
+
+    // Mouse [0,1] → translate [-overflow, 0]
+    const tx = -mx * overflowX;
+    const ty = -my * overflowY;
+
+    img.style.transform = `translate(${tx}px, ${ty}px) scale(${ZOOM_SCALE})`;
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    const img = zoomImageRef.current;
+    if (img) {
+      img.style.transformOrigin = "0 0";
+      img.style.transform = `scale(${ZOOM_SCALE})`;
+    }
+    setIsZoomed(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const img = zoomImageRef.current;
+    if (img) {
+      img.style.transform = "scale(1)";
+    }
+    setIsZoomed(false);
+  }, []);
 
   return (
     <div className="space-y-3">
-      {/* Main Image */}
-      <div className="aspect-square rounded-2xl overflow-hidden shadow-soft border border-outline-variant/10 bg-surface-container-low">
-        <img
-          className="w-full h-full object-cover transition-opacity duration-300"
-          src={selectedImage ? getImageUrl(selectedImage.image_url) : getImageUrl(null)}
-          alt={productName}
-        />
+      {/* Main Image with Zoom */}
+      <div
+        ref={zoomContainerRef}
+        className="aspect-square rounded-2xl overflow-hidden shadow-soft border border-outline-variant/10 bg-surface-container-low relative cursor-crosshair group"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onMouseMove={handleMouseMove}
+      >
+        {selectedItem && (
+          <img
+            ref={zoomImageRef}
+            className="w-full h-full object-cover transition-transform duration-200"
+            style={{ transformOrigin: "0 0" }}
+            src={selectedItem.imageUrl}
+            alt={selectedItem.label}
+            draggable={false}
+          />
+        )}
+        {/* Badge varian */}
+        {selectedItem && !selectedItem.isProduct && (
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-primary text-white text-[11px] font-semibold rounded-lg shadow-sm z-10">
+            {selectedItem.label}
+          </div>
+        )}
       </div>
 
       {/* Thumbnails */}
-      {sortedImages.length > 1 && (
+      {items.length > 0 && (
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {sortedImages.map((img, idx) => (
+          {items.map((item) => (
             <button
-              key={img.id}
-              onClick={() => setSelectedIndex(idx)}
+              key={item.key}
+              onClick={() => {
+                setSelectedKey(item.key);
+                // Auto-select variant kalau klik varian image
+                if (!item.isProduct && item.variantId && onSelectVariant) {
+                  const v = variants.find((v) => v.id === item.variantId);
+                  if (v) onSelectVariant(v);
+                }
+              }}
               className={`relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
-                selectedIndex === idx
-                  ? "border-primary shadow-soft"
+                selectedKey === item.key
+                  ? "border-primary shadow-soft ring-2 ring-primary/30"
                   : "border-outline-variant/20 hover:border-outline-variant/50"
               }`}
             >
               <img
                 className="w-full h-full object-cover"
-                src={getImageUrl(img.image_url)}
-                alt={`${productName} - ${idx + 1}`}
+                src={item.imageUrl}
+                alt={item.label}
               />
-              {img.isDefault === 1 && (
+              {/* Dot: product default → primary, variant → tertiary */}
+              {!item.isProduct && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-tertiary" />
+              )}
+              {item.isProduct && sortedImages.find((img) => `prod-${img.id}` === item.key)?.isDefault === 1 && (
                 <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-primary" />
               )}
             </button>
@@ -317,6 +466,9 @@ export default function ProductDetailPage() {
             <ImageGallery
               images={product.product_image || []}
               productName={product.name}
+              variants={variants}
+              selectedVariantId={selectedVariant?.id ?? null}
+              onSelectVariant={setSelectedVariant}
             />
           </div>
 
@@ -384,22 +536,47 @@ export default function ProductDetailPage() {
 
             {/* Variants */}
             {variants.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h3 className="text-[14px] font-semibold text-on-surface">Varian</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {variants.map((v) => {
                     const isSelected = selectedVariant?.id === v.id;
+                    const variantImg = getVariantImageUrl(v);
                     return (
                       <button
                         key={v.id}
                         onClick={() => setSelectedVariant(v)}
-                        className={`px-4 py-2 border rounded-lg text-[13px] font-medium transition-colors ${
+                        className={`flex items-center gap-3 p-2 border rounded-xl transition-all ${
                           isSelected
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-outline-variant/30 text-on-surface hover:border-primary hover:text-primary"
+                            ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                            : "border-outline-variant/30 bg-white hover:border-primary hover:shadow-sm"
                         }`}
                       >
-                        {v.title || v.name} {v.subTitle ? `(${v.subTitle})` : ""}
+                        {variantImg ? (
+                          <img
+                            src={variantImg}
+                            alt={v.title}
+                            className="w-12 h-12 rounded-lg object-cover shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[20px] text-outline">inventory_2</span>
+                          </div>
+                        )}
+                        <div className="text-left">
+                          <p className="text-[13px] font-semibold text-on-surface leading-tight">
+                            {v.title}
+                          </p>
+                          {v.subTitle && (
+                            <p className="text-[11px] text-on-surface-variant">{v.subTitle}</p>
+                          )}
+                          <p className="text-[12px] font-bold text-primary mt-0.5">
+                            Rp {v.price.toLocaleString("id-ID")}
+                          </p>
+                        </div>
                       </button>
                     );
                   })}
@@ -454,7 +631,7 @@ export default function ProductDetailPage() {
                 {/* Base Price / Variant Price */}
                 <div className="flex justify-between font-body text-[14px] leading-6">
                   <span className="text-on-surface-variant">
-                    {selectedVariant ? selectedVariant.title || selectedVariant.name : "Harga Dasar"}
+                    {selectedVariant ? selectedVariant.title : "Harga Dasar"}
                   </span>
                   <span className="font-medium">Rp {variantPrice.toLocaleString("id-ID")}</span>
                 </div>
