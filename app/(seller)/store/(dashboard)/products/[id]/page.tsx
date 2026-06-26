@@ -108,13 +108,28 @@ export default function ProductFormPage() {
           });
           const variantData: any[] = variantRes.data?.data ?? variantRes.data ?? [];
           if (Array.isArray(variantData) && variantData.length > 0) {
-            const mapped: VariantFormEntry[] = variantData.map((v: any) => ({
-              localId: `existing-var-${v.id}`,
-              title: v.title || v.name || "",
-              sub_title: v.sub_title || "",
-              price: String(v.price || ""),
-              backendId: v.id,
-            }));
+            const storageBase = process.env.NEXT_PUBLIC_ACCESS_FILE_STORAGE || "http://192.168.3.23";
+            const mapped: VariantFormEntry[] = variantData.map((v: any) => {
+              // Resolve server image URL
+              const images = v.product_image;
+              let imagePreview: string | undefined;
+              if (images && images.length > 0) {
+                const raw = images[0].image_url;
+                if (raw) {
+                  imagePreview = raw.startsWith("http")
+                    ? raw
+                    : `${storageBase}${raw.startsWith("/") ? raw : `/${raw}`}`;
+                }
+              }
+              return {
+                localId: `existing-var-${v.id}`,
+                title: v.title || v.name || "",
+                sub_title: v.sub_title || "",
+                price: String(v.price || ""),
+                backendId: v.id,
+                imagePreview,
+              };
+            });
             setVariants(mapped);
           }
         } catch {
