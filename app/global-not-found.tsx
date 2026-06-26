@@ -1,6 +1,5 @@
 import "./globals.css";
 import { Playfair_Display, Montserrat } from "next/font/google";
-import Link from "next/link";
 import type { Metadata } from "next";
 
 const playfair = Playfair_Display({
@@ -107,7 +106,7 @@ export default function GlobalNotFound() {
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto animate-[slideUp_0.5s_ease_0.3s_both]">
-              <Link
+              <a
                 href="/"
                 className="flex-1 sm:flex-none px-8 py-4 bg-primary text-white rounded-xl text-[14px] font-semibold shadow-soft hover:shadow-float hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
@@ -115,7 +114,7 @@ export default function GlobalNotFound() {
                   home
                 </span>
                 Kembali ke Beranda
-              </Link>
+              </a>
             </div>
 
             {/* Footer */}
