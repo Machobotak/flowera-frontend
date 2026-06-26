@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
@@ -252,38 +252,64 @@ function ImageGallery({
 
   const selectedItem = items.find((it) => it.key === selectedKey) || items[0];
 
-  // ─── Zoom state ───
+  // ─── Zoom logic ───
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
+  const zoomImageRef = useRef<HTMLImageElement>(null);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 }); // persentase
+  const ZOOM_SCALE = 2.5;
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoomPos({ x, y });
-  };
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const img = zoomImageRef.current;
+    const container = zoomContainerRef.current;
+    if (!img || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;  // 0–1
+    const my = (e.clientY - rect.top) / rect.height;  // 0–1
+
+    // Overflow = seberapa banyak gambar zoom melebihi container
+    const overflowX = rect.width * (ZOOM_SCALE - 1);
+    const overflowY = rect.height * (ZOOM_SCALE - 1);
+
+    // Mouse [0,1] → translate [-overflow, 0]
+    const tx = -mx * overflowX;
+    const ty = -my * overflowY;
+
+    img.style.transform = `translate(${tx}px, ${ty}px) scale(${ZOOM_SCALE})`;
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    const img = zoomImageRef.current;
+    if (img) {
+      img.style.transformOrigin = "0 0";
+      img.style.transform = `scale(${ZOOM_SCALE})`;
+    }
+    setIsZoomed(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const img = zoomImageRef.current;
+    if (img) {
+      img.style.transform = "scale(1)";
+    }
+    setIsZoomed(false);
+  }, []);
 
   return (
     <div className="space-y-3">
       {/* Main Image with Zoom */}
       <div
+        ref={zoomContainerRef}
         className="aspect-square rounded-2xl overflow-hidden shadow-soft border border-outline-variant/10 bg-surface-container-low relative cursor-crosshair group"
-        onMouseEnter={() => setIsZoomed(true)}
-        onMouseLeave={() => setIsZoomed(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         onMouseMove={handleMouseMove}
       >
         {selectedItem && (
           <img
-            className={`w-full h-full transition-all duration-200 ${
-              isZoomed
-                ? "scale-[2.5] object-cover"
-                : "object-cover"
-            }`}
-            style={
-              isZoomed
-                ? { transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }
-                : undefined
-            }
+            ref={zoomImageRef}
+            className="w-full h-full object-cover transition-transform duration-200"
+            style={{ transformOrigin: "0 0" }}
             src={selectedItem.imageUrl}
             alt={selectedItem.label}
             draggable={false}
