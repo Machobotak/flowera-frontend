@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 // ─── Delete Confirmation Modal ───
 function DeleteModal({
@@ -89,6 +91,9 @@ export default function StoreProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Toast
+  const { toasts, addToast, removeToast } = useToast();
+
   // Delete modal state
   const [productToDelete, setProductToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -131,6 +136,7 @@ export default function StoreProductsPage() {
       setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
       setProductToDelete(null);
       setDeleteError(null);
+      addToast(`Produk "${productToDelete.name}" berhasil dihapus`, "success");
     } catch (err: any) {
       // Gagal: tampilkan error di dalam modal, jangan tutup
       const msg =
@@ -162,6 +168,8 @@ export default function StoreProductsPage() {
 
   return (
     <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       {/* Delete Confirmation Modal */}
       {productToDelete && (
         <DeleteModal

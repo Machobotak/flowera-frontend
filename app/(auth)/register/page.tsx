@@ -4,6 +4,8 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import ToastContainer from "@/components/toast-container";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
@@ -42,7 +44,7 @@ function RegisterPageContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
 
   const passwordStrength = getPasswordStrength(password);
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
@@ -50,14 +52,14 @@ function RegisterPageContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreeTerms || passwordsMismatch) return;
+    if (!agreeTerms) { addToast("Anda harus menyetujui syarat & ketentuan.", "error"); return; }
+    if (passwordsMismatch) { addToast("Konfirmasi password tidak cocok.", "error"); return; }
     setIsLoading(true);
-    setError(null);
     try {
       await register(name, phoneNumber, email, password);
       window.location.href = redirectTo;
     } catch (err: any) {
-      setError(err.message || "Registrasi gagal. Silakan coba lagi.");
+      addToast(err.message || "Registrasi gagal. Silakan coba lagi.", "error");
       setIsLoading(false);
     }
   };
@@ -83,18 +85,7 @@ function RegisterPageContent() {
             </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-error-container/20 border border-error/20 rounded-xl px-4 py-3 flex items-start gap-3 text-error">
-              <span className="material-symbols-outlined text-error text-[20px] mt-0.5" style={FILL_STYLE}>
-                error
-              </span>
-              <div>
-                <p className="text-[13px] font-semibold text-error">Gagal Daftar</p>
-                <p className="text-[12px] text-error-container mt-0.5">{error}</p>
-              </div>
-            </div>
-          )}
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
 
           {/* Social register */}
           <div className="space-y-3">
@@ -121,7 +112,7 @@ function RegisterPageContent() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-on-surface block">
