@@ -31,12 +31,18 @@ export default function ProductFormPage() {
   const [newVariantTitle, setNewVariantTitle] = useState("");
   const [newVariantSubtitle, setNewVariantSubtitle] = useState("");
   const [newVariantPrice, setNewVariantPrice] = useState("");
+  const [newVariantImage, setNewVariantImage] = useState<File | null>(null);
+  const [newVariantImagePreview, setNewVariantImagePreview] = useState<string | null>(null);
+  const variantImageInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Variant edit state ───
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [editVariantTitle, setEditVariantTitle] = useState("");
   const [editVariantSubtitle, setEditVariantSubtitle] = useState("");
   const [editVariantPrice, setEditVariantPrice] = useState("");
+  const [editVariantImage, setEditVariantImage] = useState<File | null>(null);
+  const [editVariantImagePreview, setEditVariantImagePreview] = useState<string | null>(null);
+  const editVariantImageInputRef = useRef<HTMLInputElement>(null);
   const [isSavingVariant, setIsSavingVariant] = useState<string | null>(null); // localId of variant being saved/deleted
 
   // ─── Image state ───
@@ -95,11 +101,14 @@ export default function ProductFormPage() {
 
         // Load existing variants
         try {
-          const detailRes = await axios.get(`/api/user/product/detail/${productId}`, { withCredentials: true });
-          const detailData = detailRes.data?.data || detailRes.data || {};
-          const existingVariants = detailData.product_variant || [];
-          if (Array.isArray(existingVariants) && existingVariants.length > 0) {
-            const mapped: VariantFormEntry[] = existingVariants.map((v: any) => ({
+          // Match: GET seller/product-variant --data '{"product":34}'
+          const variantRes = await axios.get("/api/seller/product-variant", {
+            data: { product: parseInt(productId) },
+            withCredentials: true,
+          });
+          const variantData: any[] = variantRes.data?.data ?? variantRes.data ?? [];
+          if (Array.isArray(variantData) && variantData.length > 0) {
+            const mapped: VariantFormEntry[] = variantData.map((v: any) => ({
               localId: `existing-var-${v.id}`,
               title: v.title || v.name || "",
               sub_title: v.sub_title || "",
@@ -176,15 +185,46 @@ export default function ProductFormPage() {
       title: newVariantTitle.trim(),
       sub_title: newVariantSubtitle.trim(),
       price: newVariantPrice,
+      imageFile: newVariantImage || undefined,
+      imagePreview: newVariantImagePreview || undefined,
     };
     setVariants((prev) => [...prev, entry]);
     setNewVariantTitle("");
     setNewVariantSubtitle("");
     setNewVariantPrice("");
+    setNewVariantImage(null);
+    setNewVariantImagePreview(null);
+  };
+
+  const handleVariantImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const prevUrl = newVariantImagePreview;
+    setNewVariantImage(file);
+    setNewVariantImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+    // revoke setelah state update & img unmount dari DOM
+    if (prevUrl) requestAnimationFrame(() => URL.revokeObjectURL(prevUrl));
+  };
+
+  const clearVariantImage = () => {
+    const prevUrl = newVariantImagePreview;
+    setNewVariantImage(null);
+    setNewVariantImagePreview(null);
+    // revoke setelah img unmount dari DOM
+    if (prevUrl) requestAnimationFrame(() => URL.revokeObjectURL(prevUrl));
   };
 
   const removeVariant = (localId: string) => {
-    setVariants((prev) => prev.filter((v) => v.localId !== localId));
+    setVariants((prev) => {
+      const target = prev.find((v) => v.localId === localId);
+      // Tunda revoke sampai setelah img unmount dari DOM
+      if (target?.imagePreview && target.imagePreview.startsWith("blob:")) {
+        const url = target.imagePreview;
+        requestAnimationFrame(() => URL.revokeObjectURL(url));
+      }
+      return prev.filter((v) => v.localId !== localId);
+    });
   };
 
   // ─── Variant edit & delete (server-aware) ───
@@ -193,6 +233,10 @@ export default function ProductFormPage() {
     setEditVariantTitle(v.title);
     setEditVariantSubtitle(v.sub_title);
     setEditVariantPrice(v.price);
+    const prevUrl = editVariantImage ? editVariantImagePreview : null;
+    setEditVariantImage(null);
+    setEditVariantImagePreview(v.imagePreview || null);
+    if (prevUrl) requestAnimationFrame(() => URL.revokeObjectURL(prevUrl));
   };
 
   const cancelEditVariant = () => {
@@ -200,6 +244,21 @@ export default function ProductFormPage() {
     setEditVariantTitle("");
     setEditVariantSubtitle("");
     setEditVariantPrice("");
+    const prevUrl = editVariantImage ? editVariantImagePreview : null;
+    setEditVariantImage(null);
+    setEditVariantImagePreview(null);
+    if (prevUrl) requestAnimationFrame(() => URL.revokeObjectURL(prevUrl));
+  };
+
+  const handleEditVariantImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    // hanya revoke kalau sebelumnya ada file baru (bukan existing)
+    const prevUrl = editVariantImage ? editVariantImagePreview : null;
+    setEditVariantImage(file);
+    setEditVariantImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+    if (prevUrl) requestAnimationFrame(() => URL.revokeObjectURL(prevUrl));
   };
 
   const saveEditVariant = async () => {
@@ -218,6 +277,7 @@ export default function ProductFormPage() {
     if (target.backendId) {
       setIsSavingVariant(editingVariantId);
       try {
+        // 1) Update text fields (JSON partial update)
         await axios.put(
           `/api/seller/product-variant/update/${target.backendId}`,
           {
@@ -225,8 +285,25 @@ export default function ProductFormPage() {
             sub_title: updatedSubtitle,
             price: parseInt(updatedPrice),
           },
-          { withCredentials: true }
+          {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true,
+          }
         );
+
+        // 2) Upload new image if any (FormData — file only, seperti curl)
+        if (editVariantImage) {
+          const fileFormData = new FormData();
+          fileFormData.append("file", editVariantImage);
+          await axios.put(
+            `/api/seller/product-variant/update/${target.backendId}`,
+            fileFormData,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+              withCredentials: true,
+            }
+          );
+        }
       } catch (err: any) {
         const msg = err.response?.data?.message || err.message || "Gagal memperbarui varian";
         setError(msg);
@@ -240,15 +317,28 @@ export default function ProductFormPage() {
     setVariants((prev) =>
       prev.map((v) =>
         v.localId === editingVariantId
-          ? { ...v, title: updatedTitle, sub_title: updatedSubtitle, price: updatedPrice }
+          ? {
+              ...v,
+              title: updatedTitle,
+              sub_title: updatedSubtitle,
+              price: updatedPrice,
+              imageFile: editVariantImage || v.imageFile,
+              imagePreview: (editVariantImage ? editVariantImagePreview : v.imagePreview) ?? undefined,
+            }
           : v
       )
     );
     cancelEditVariant();
   };
 
-  const deleteVariant = async (v: VariantFormEntry) => {
-    // If variant exists on server, call delete API first
+  // ─── Delete confirmation state ───
+  const [variantToDelete, setVariantToDelete] = useState<VariantFormEntry | null>(null);
+
+  const confirmDeleteVariant = async () => {
+    if (!variantToDelete) return;
+    const v = variantToDelete;
+    setVariantToDelete(null);
+
     if (v.backendId) {
       setIsSavingVariant(v.localId);
       try {
@@ -388,15 +478,21 @@ export default function ProductFormPage() {
       if (variantsToCreate.length > 0) {
         setSubmitStep("creating_variants");
         for (const variant of variantsToCreate) {
+          const formData = new FormData();
+          formData.append("title", variant.title);
+          formData.append("sub_title", variant.sub_title);
+          formData.append("price", variant.price);
+          formData.append("product_id", String(activeProductId));
+          if (variant.imageFile) {
+            formData.append("file", variant.imageFile);
+          }
           await axios.post(
             "/api/seller/product-variant/create",
+            formData,
             {
-              title: variant.title,
-              sub_title: variant.sub_title,
-              price: parseInt(variant.price),
-              product_id: activeProductId,
-            },
-            { withCredentials: true }
+              headers: { "Content-Type": "multipart/form-data" },
+              withCredentials: true,
+            }
           );
         }
       }
@@ -531,6 +627,61 @@ export default function ProductFormPage() {
               ? "Produk berhasil diperbarui! Mengalihkan ke daftar produk..."
               : "Produk berhasil ditambahkan! Mengalihkan ke daftar produk..."}
           </p>
+        </div>
+      )}
+
+      {/* Delete Variant Confirmation Modal */}
+      {variantToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.15s_ease]"
+            onClick={() => !isSavingVariant && setVariantToDelete(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full animate-[slideUp_0.2s_ease]">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-error-container flex items-center justify-center">
+                <span
+                  className="material-symbols-outlined text-[28px] text-error"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  delete
+                </span>
+              </div>
+              <div>
+                <h3 className="text-[18px] font-bold text-on-surface">Hapus Varian?</h3>
+                <p className="text-[13px] text-on-surface-variant mt-1">
+                  Varian <span className="font-semibold text-on-surface">&quot;{variantToDelete.title}&quot;</span>{" "}
+                  akan dihapus secara permanen.
+                </p>
+              </div>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setVariantToDelete(null)}
+                  disabled={!!isSavingVariant}
+                  className="flex-1 py-3 border border-outline-variant/40 text-on-surface font-semibold text-[14px] rounded-xl hover:bg-surface-container transition-colors disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmDeleteVariant}
+                  disabled={!!isSavingVariant}
+                  className="flex-1 py-3 bg-error text-white font-semibold text-[14px] rounded-xl hover:bg-error/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSavingVariant === variantToDelete.localId ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                      Menghapus...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                      Hapus
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -739,6 +890,51 @@ export default function ProductFormPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Edit variant image */}
+                      <div className="space-y-1.5">
+                        <label className="text-[12px] font-semibold text-on-surface-variant">
+                          Foto Varian
+                        </label>
+                        {editVariantImagePreview ? (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={editVariantImagePreview}
+                              alt="Preview"
+                              className="w-16 h-16 rounded-xl object-cover border border-outline-variant/30"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const prevUrl = editVariantImage ? editVariantImagePreview : null;
+                                setEditVariantImage(null);
+                                setEditVariantImagePreview(null);
+                                if (prevUrl) requestAnimationFrame(() => URL.revokeObjectURL(prevUrl));
+                              }}
+                              className="text-[12px] text-error hover:underline"
+                            >
+                              Hapus foto
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => editVariantImageInputRef.current?.click()}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-dashed border-outline-variant/40 rounded-xl text-[13px] text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
+                            Pilih Foto
+                          </button>
+                        )}
+                        <input
+                          ref={editVariantImageInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={handleEditVariantImageChange}
+                        />
+                      </div>
+
                       <div className="flex items-center gap-2 pt-1">
                         <button
                           type="button"
@@ -772,6 +968,14 @@ export default function ProductFormPage() {
                     key={v.localId}
                     className="flex items-center gap-3 p-4 bg-surface-container-low rounded-xl border border-outline-variant/20 group"
                   >
+                    {/* Variant image thumbnail */}
+                    {v.imagePreview && (
+                      <img
+                        src={v.imagePreview}
+                        alt={v.title}
+                        className="w-12 h-12 rounded-lg object-cover border border-outline-variant/20 shrink-0"
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-semibold text-on-surface truncate">{v.title}</p>
                       {v.sub_title && (
@@ -792,7 +996,7 @@ export default function ProductFormPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteVariant(v)}
+                        onClick={() => setVariantToDelete(v)}
                         disabled={!!isSavingVariant || !!editingVariantId}
                         className="w-8 h-8 rounded-lg bg-error-container/50 hover:bg-error-container flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
                       >
@@ -838,6 +1042,45 @@ export default function ProductFormPage() {
                   className="w-full px-4 py-3 bg-white border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant outline-none"
                 />
               </div>
+            </div>
+
+            {/* Variant Image */}
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-semibold text-on-surface-variant">
+                Foto Varian
+              </label>
+              {newVariantImagePreview ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={newVariantImagePreview}
+                    alt="Preview varian"
+                    className="w-16 h-16 rounded-xl object-cover border border-outline-variant/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearVariantImage}
+                    className="text-[12px] text-error hover:underline"
+                  >
+                    Hapus foto
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => variantImageInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-3 bg-white border border-dashed border-outline-variant/40 rounded-xl text-[13px] text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
+                  Pilih Foto
+                </button>
+              )}
+              <input
+                ref={variantImageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleVariantImageChange}
+              />
             </div>
 
             <div className="flex items-end gap-3">

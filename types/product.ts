@@ -54,4 +54,6 @@ export interface VariantFormEntry {
   sub_title: string;
   price: string;
   backendId?: number; // populated after save or when loaded from server
+  imageFile?: File;   // new image to upload (only for create/update)
+  imagePreview?: string; // object URL for preview
 }
