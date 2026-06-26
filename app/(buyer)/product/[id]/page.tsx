@@ -193,11 +193,13 @@ function ImageGallery({
   images,
   productName,
   variants,
+  selectedVariantId,
   onSelectVariant,
 }: {
   images: ProductImage[];
   productName: string;
   variants: ProductVariant[];
+  selectedVariantId?: number | null;
   onSelectVariant?: (variant: ProductVariant) => void;
 }) {
   // Build combined gallery: product images first, then variant images
@@ -234,6 +236,19 @@ function ImageGallery({
   const [selectedKey, setSelectedKey] = useState<string>(
     items.length > 0 ? items[0].key : ""
   );
+
+  // Sync: klik varian dari info panel → gallery ikut pindah
+  useEffect(() => {
+    if (selectedVariantId != null) {
+      const variantItem = items.find(
+        (it) => !it.isProduct && it.variantId === selectedVariantId
+      );
+      if (variantItem) {
+        setSelectedKey(variantItem.key);
+      }
+    }
+    // kalau selectedVariantId null/undefined, biarkan gallery di posisi saat ini
+  }, [selectedVariantId]);
 
   const selectedItem = items.find((it) => it.key === selectedKey) || items[0];
 
@@ -426,6 +441,7 @@ export default function ProductDetailPage() {
               images={product.product_image || []}
               productName={product.name}
               variants={variants}
+              selectedVariantId={selectedVariant?.id ?? null}
               onSelectVariant={setSelectedVariant}
             />
           </div>
