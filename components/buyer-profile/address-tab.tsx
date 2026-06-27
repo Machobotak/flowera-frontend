@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
+import DeleteConfirmModal from "@/components/seller-product/delete-confirm-modal";
 
 interface Address {
   id: string;
@@ -29,6 +30,9 @@ export default function AddressTab() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
 
   // Form fields
   const [formLabel, setFormLabel] = useState("");
@@ -60,7 +64,7 @@ export default function AddressTab() {
   // Fetch addresses
   const fetchAddresses = async () => {
     try {
-      const res = await axios.get("/api/user/profile/addresses", { withCredentials: true });
+      const res = await axios.get("/api/user/address", { withCredentials: true });
       const data: any[] = res.data?.data ?? res.data ?? [];
       const mapped: Address[] = data.map((a: any) => ({
         id: String(a.id),
@@ -229,11 +233,11 @@ export default function AddressTab() {
     const payload = { nama_penerima: formName, no_hp: formPhone, address: fullAddress, note: formNote || "" };
     try {
       if (editingId) {
-        await axios.patch(`/api/user/profile/addresses/${editingId}`, payload, { withCredentials: true });
-        setAddresses((prev) => prev.map((a) => a.id === editingId ? { ...a, name: formName, phone: formPhone, address: fullAddress, label: formLabel || "Alamat" } : a));
+        await axios.patch(`/api/user/address/${editingId}`, payload, { withCredentials: true });
+        setAddresses((prev) => prev.map((a) => a.id === editingId ? { ...a, name: formName, phone: formPhone, address: fullAddress, label: formLabel || "Alamat", note: formNote } : a));
         addToast("Alamat berhasil diperbarui", "success");
       } else {
-        const res = await axios.post("/api/user/profile/addresses", payload, { withCredentials: true });
+        const res = await axios.post("/api/user/address", payload, { withCredentials: true });
         const newId = res.data?.data?.id || res.data?.id || Date.now().toString();
         setAddresses((prev) => [...prev, { id: String(newId), label: formLabel || "Alamat", name: formName, phone: formPhone, address: fullAddress, city: formCityName, postalCode: formPostalCode, isDefault: addresses.length === 0 }]);
         addToast("Alamat berhasil ditambahkan", "success");
@@ -246,7 +250,7 @@ export default function AddressTab() {
 
   const handleSetDefault = async (id: string) => {
     try {
-      await axios.patch(`/api/user/profile/addresses/${id}`, { is_default: true }, { withCredentials: true });
+      await axios.patch(`/api/user/address/${id}`, { is_default: true }, { withCredentials: true });
       setAddresses((prev) => prev.map((a) => ({ ...a, isDefault: a.id === id })));
     } catch (err: any) {
       addToast(err.response?.data?.message || err.message || "Gagal mengatur alamat utama", "error");
@@ -254,12 +258,16 @@ export default function AddressTab() {
   };
 
   const handleDelete = async (id: string) => {
+    setSaving(true);
     try {
-      await axios.delete(`/api/user/profile/addresses/${id}`, { withCredentials: true });
+      await axios.delete(`/api/user/address/${id}`, { withCredentials: true });
       setAddresses((prev) => prev.filter((a) => a.id !== id));
       addToast("Alamat berhasil dihapus", "success");
     } catch (err: any) {
       addToast(err.response?.data?.message || err.message || "Gagal menghapus alamat", "error");
+    } finally {
+      setSaving(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -382,7 +390,7 @@ export default function AddressTab() {
               <div className="flex flex-col items-end gap-2 flex-shrink-0">
                 <div className="flex gap-2">
                   <button onClick={() => openEditForm(addr)} className="text-[12px] text-primary font-semibold hover:underline">Ubah</button>
-                  {!addr.isDefault && (<><span className="text-outline-variant">|</span><button onClick={() => handleDelete(addr.id)} className="text-[12px] text-error font-semibold hover:underline">Hapus</button></>)}
+                  {!addr.isDefault && (<><span className="text-outline-variant">|</span><button onClick={() => setDeleteTarget({ id: addr.id, label: addr.label })} className="text-[12px] text-error font-semibold hover:underline">Hapus</button></>)}
                 </div>
                 {!addr.isDefault && (<button onClick={() => handleSetDefault(addr.id)} className="text-[12px] text-on-surface-variant border border-outline-variant/40 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-all">Atur sebagai Utama</button>)}
               </div>
@@ -397,6 +405,22 @@ export default function AddressTab() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteTarget !== null}
+        title="Hapus Alamat"
+        itemName={deleteTarget?.label ?? ""}
+        description="Alamat"
+        isDeleting={saving}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget.id);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+        confirmLabel="Hapus"
+        confirmingLabel="Menghapus..."
+        error={null}
+      />
     </div>
   );
 }

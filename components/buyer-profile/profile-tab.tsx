@@ -1,38 +1,34 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
+import { getProfileDetail, updateProfile } from "@/utils/profile-api";
+import { useAuth } from "@/contexts/auth-context";
 
 const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
 
-const USER = {
-  name: "Eleanor Vance",
-  label: "Premium Member",
-  avatar:
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuBnNFXBawqirwRLnyecSeAd6E2mzFVJEOOXq-W98lx1c_Z7ieclUEvOAvqYH_svhA6fvyPWicVWnYrlsGo6YZRU8J5pR2ZGzyRhLZvJ7rjqHm1xgxZk85d1AOVTLZAnAlOp0m6hD1NalFRswYil1qcxkUpbXKkaq1NYvrE2JNlKiQd1fZVh5s8isV340Js_BP-7444W03IttiJTczSGODFZigsJOesIRPRWBrjbwNwLI36apTgWfECrhT1CJWU55BNsVgYdJuCfn1Q",
-};
+const FALLBACK_AVATAR =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBnNFXBawqirwRLnyecSeAd6E2mzFVJEOOXq-W98lx1c_Z7ieclUEvOAvqYH_svhA6fvyPWicVWnYrlsGo6YZRU8J5pR2ZGzyRhLZvJ7rjqHm1xgxZk85d1AOVTLZAnAlOp0m6hD1NalFRswYil1qcxkUpbXKkaq1NYvrE2JNlKiQd1fZVh5s8isV340Js_BP-7444W03IttiJTczSGODFZigsJOesIRPRWBrjbwNwLI36apTgWfECrhT1CJWU55BNsVgYdJuCfn1Q";
 
 export default function ProfileTab() {
+  const { user } = useAuth();
   const { toasts, addToast, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
   const [birthday, setBirthday] = useState("");
   const [gender, setGender] = useState("");
-  const [avatar, setAvatar] = useState("");
+  const [avatar, setAvatar] = useState(user?.avatar || "");
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get("/api/user/profile", { withCredentials: true });
-        const data = res.data?.data || res.data || {};
-        setName(data.name || "");
-        setEmail(data.email || "");
+        const res = await getProfileDetail();
+        // Handle both wrapped ({ data: {...} }) and unwrapped responses
+        const data = (res as any)?.data || res || {};
+        // name & email come from auth context — profile API only provides the extras
         setPhone(data.no_hp || data.phone_number || data.phone || "");
         setBirthPlace(data.birth_place || "");
         const rawBirth = data.birth_date || data.birt_date || data.birthday || data.birthDate || data.tanggal_lahir || "";
@@ -60,16 +56,14 @@ export default function ProfileTab() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.patch("/api/user/profile", {
-        name: name || undefined,
-        email: email || undefined,
+      await updateProfile({
         no_hp: phone || undefined,
         birth_place: birthPlace || undefined,
         birth_date: birthday
           ? (() => { const d = new Date(birthday); return isNaN(d.getTime()) ? birthday : d.toISOString().split("T")[0]; })()
           : undefined,
         gender: gender || undefined,
-      }, { withCredentials: true });
+      });
       addToast("Profil berhasil disimpan!", "success");
     } catch (err: any) {
       addToast(err.response?.data?.message || err.message || "Gagal menyimpan profil", "error");
@@ -103,13 +97,13 @@ export default function ProfileTab() {
           <div className="flex-1 p-7 space-y-5">
             <div className="grid grid-cols-[120px_1fr] items-center gap-4">
               <label className="text-[13px] text-on-surface-variant text-right">Nama</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+              <input type="text" value={user?.name || ""} readOnly className="px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] text-on-surface/60" />
             </div>
             <div className="grid grid-cols-[120px_1fr] items-center gap-4">
               <label className="text-[13px] text-on-surface-variant text-right">Email</label>
               <div className="flex items-center gap-3">
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1 px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
-                {email && <span className="material-symbols-outlined text-secondary text-[18px]" style={FILL_STYLE}>verified</span>}
+                <input type="email" value={user?.email || ""} readOnly className="flex-1 px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] text-on-surface/60" />
+                {user?.email && <span className="material-symbols-outlined text-secondary text-[18px]" style={FILL_STYLE}>verified</span>}
               </div>
             </div>
             <div className="grid grid-cols-[120px_1fr] items-center gap-4">
@@ -148,7 +142,7 @@ export default function ProfileTab() {
           </div>
           <div className="lg:w-64 p-7 lg:border-l border-t lg:border-t-0 border-outline-variant/20 flex flex-col items-center justify-start gap-4">
             <div className="relative">
-              <img alt="Avatar" className="w-28 h-28 rounded-full object-cover border-4 border-surface-container shadow-md" src={avatar || USER.avatar} />
+              <img alt="Avatar" className="w-28 h-28 rounded-full object-cover border-4 border-surface-container shadow-md" src={avatar || user?.avatar || FALLBACK_AVATAR} />
               <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
                 <span className="material-symbols-outlined text-white text-[24px]">photo_camera</span>
               </div>

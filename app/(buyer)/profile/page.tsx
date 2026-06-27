@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import axios from "axios";
 import { useAuth } from "@/contexts/auth-context";
+import { resolveImageUrl, getProductImageUrl } from "@/utils/image-url";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
-type OrderFilter = "all" | "waiting" | "preparing" | "delivery" | "delivered" | "cancelled" | "custom";
+type OrderFilter = "all" | "pending" | "paid" | "processing" | "shipped" | "completed" | "cancelled";
 
 interface SidebarLink {
   icon: string;
@@ -14,27 +16,6 @@ interface SidebarLink {
   href: string;
   active?: boolean;
   filled?: boolean;
-}
-
-interface OrderItem {
-  id: string;
-  orderId: string;
-  status: string;
-  statusColor: string;
-  floristName: string;
-  floristImage: string;
-  bouquetName: string;
-  bouquetImage: string;
-  details: string;
-  recipient: string;
-  delivery: string;
-  qty: number;
-  subtotal: string;
-  deliveryCost: string;
-  total: string;
-  timelineStep: number;
-  progressImages?: string[];
-  isPast?: boolean;
 }
 
 /* ──────────────────────────── Constants ──────────────────────────── */
@@ -61,61 +42,13 @@ const SIDEBAR_LINKS_BOTTOM: SidebarLink[] = [
 ];
 
 const ORDER_FILTERS: { id: OrderFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "waiting", label: "Waiting Payment" },
-  { id: "preparing", label: "Preparing" },
-  { id: "delivery", label: "In Delivery" },
-  { id: "delivered", label: "Delivered" },
-  { id: "cancelled", label: "Cancelled" },
-  { id: "custom", label: "Custom Requests" },
-];
-
-const ORDERS: OrderItem[] = [
-  {
-    id: "1",
-    orderId: "#FLW-92841-B",
-    status: "Being Arranged",
-    statusColor: "bg-secondary-container text-on-secondary-container",
-    floristName: "The Velvet Rose Atelier",
-    floristImage:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCj3keEyPP7WBbJLkO-Y8tYoIC5reF2gMaAII9bAS1Rf14BkAwgNcnPkqv3yYSINsON1A6SUWsGJfD2rCsDJUqPWxqBOGxPPVxk8T0F_O5gQz8NfZiRcIQuyNoJUC17Y8G_Rw7N-yjyGjwy6vUFGPaxvOcZRc3FNVgPTtgPZhrboplSyhBBDs67e_vFNmEqo7394P91LnBtZjI9yvzCc0jOcGpjB0SYMwDrS0l-OAPCPcKTnV8sqp8hRqNs777pOafq4TDL2IC_AwE",
-    bouquetName: "Midnight Romance Custom",
-    bouquetImage:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuD8IK4PcX6IdyO4I8wuuwS82VVT2D3Xso1tFQrEe5RcXI_CbBBYcnmSrOjP1WwBPFNhLME0tfOD11jF1IMG_bJfw7Vw8xHbC4YMjTCECm7YHZBFmTMUZVSmkVpuaWou_wgObZhrLdyEYntVmB9ZxfXhEbeJwmz6A0zfAdllpiqUhTj93eeTFzIlhhC5tci4U4n6jZhNOhCTylDA8WL0Mv2stuQxrwfyGAJE80CTUOuHlBmrujokSvRPkdNsi06bK7AX1ML3itSNNgw",
-    details: "Red Roses, Sage Wrapping, Teddy Bear x2",
-    recipient: "Clara Vance",
-    delivery: "Oct 14, 2024 (Morning)",
-    qty: 1,
-    subtotal: "$124.00",
-    deliveryCost: "$15.00",
-    total: "$139.00",
-    timelineStep: 2,
-    progressImages: [
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDRGZRTSVBaBPQWCPvds2J-z8MMBeBfdfjIT75J-JcokpTc0sjLM-njCUAV1asJ-1lhTY9E67285F9tflgCQDmSDkYoAp8Smp7WhOO0UetPSQh0rmQ-nAAZw89aAIw8rDVz9z3LBERFQp0R3PuqBQRZWyeZ9wk6xWRkFfizQVW2xFkFgJZQsG_JjqVxibufx-sV51yuSIAsniV-l_S8vKW56INhgv5DQgCtsirAN1H2W9M65E1RaWHMklz4Q-ks1FjSArms3VyjBsw",
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBcgMtQsbjRf7M3xvXqO1fQI-Ur1XJ2k8GKTZs2QBE7BTYMFv6-H5Xa6i-r_lfxnns72Cw1Gp-e6z3vnO-lerYwyxceTzVQ1LlKe8zZHev1BRnu7a5xV4N3gVC5l6-MRAnXVEvGMYyRVYbQ5R20DoInzbVNbFDQJhfWacDz5UehL3sCwHi_ikg2zOAgyKyuVbLkWhEexAFfZH_PVIvhXD-Ze0I1vGRYcZHboWuFra85figBmsqJSSjeax_cu0Vtxq2VszVnXwAyrCo",
-    ],
-  },
-  {
-    id: "2",
-    orderId: "#FLW-88210-A",
-    status: "Delivered",
-    statusColor: "bg-surface-container text-on-surface-variant",
-    floristName: "Petals & Poetry",
-    floristImage:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAu3mYqV0XcOZ3eN08EpGRI8hjpYKwLA2V7mI-zStKjx6ZCAB77rQ4Cj4N9yfUPTKR1OFgEs5lgBLpUEKu_S3Ysc3ZEHLOJAB6KgI_jdl1ea2lU5ugvxreOpokMM83ZvDKT0gPFojOEsBeElnOJS4ycshLA8CicxF_PkVCLwhNoNnJvsy64cx92pVURNkAXxO9G284IClrUEfC5olxRVRmhDVmmcKeZg8mvEDoUWEEt34HgePuulaf5qnNgn-vychhs7YFke8WV2rc",
-    bouquetName: "Soft Whispers Bouquet",
-    bouquetImage:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBOOik4q_tzpN-m1nI7raLcUzJ8qwp2H59K5pOIugQL-JYp2OYTwaYKXke_ig1zRK1DY6dwXr4UwlS3gsANdyL44zXiW2wDqxCWXchmyBFaY381gI1y8K52sIBULn6POyt_JTJtVNTrCCZ0cf6xPJJxcA7vWUyDsFTtWTnq2ulrPuwMLh4WhSW0cOzibOd33ONEgeEoG1bQVpU7DI_ZzuKwaYRa7PXn3Gq6R2U2YdL1zjKFYw5mb8JOWTb3ZFypyhOwEtHYAZUP3wQ",
-    details: "",
-    recipient: "Eleanor Vance (Self)",
-    delivery: "",
-    qty: 1,
-    subtotal: "",
-    deliveryCost: "",
-    total: "",
-    timelineStep: 4,
-    isPast: true,
-  },
+  { id: "all", label: "Semua" },
+  { id: "pending", label: "Menunggu Bayar" },
+  { id: "paid", label: "Dibayar" },
+  { id: "processing", label: "Diproses" },
+  { id: "shipped", label: "Dikirim" },
+  { id: "completed", label: "Selesai" },
+  { id: "cancelled", label: "Dibatalkan" },
 ];
 
 const CUSTOM_DESIGNS = [
@@ -137,6 +70,67 @@ const CUSTOM_DESIGNS = [
 ];
 
 const TIMELINE_STEPS = ["Received", "Arranging", "In Transit", "Delivered"];
+
+/* ──────────────── Status helpers ──────────────── */
+
+function getStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    pending: "Menunggu Pembayaran",
+    paid: "Sudah Dibayar",
+    processing: "Sedang Diproses",
+    shipped: "Dalam Pengiriman",
+    completed: "Selesai",
+    cancelled: "Dibatalkan",
+  };
+  return map[status] || status;
+}
+
+function getStatusColor(status: string): string {
+  const map: Record<string, string> = {
+    pending: "bg-tertiary-container text-on-tertiary-container",
+    paid: "bg-secondary-container text-on-secondary-container",
+    processing: "bg-primary-container text-on-primary-container",
+    shipped: "bg-secondary-container text-on-secondary-container",
+    completed: "bg-surface-container text-on-surface-variant",
+    cancelled: "bg-error-container text-on-error-container",
+  };
+  return map[status] || "bg-surface-container text-on-surface-variant";
+}
+
+function getTimelineStep(status: string): number {
+  const map: Record<string, number> = {
+    pending: 0,
+    paid: 1,
+    processing: 2,
+    shipped: 3,
+    completed: 4,
+    cancelled: 0,
+  };
+  return map[status] ?? 0;
+}
+
+function formatRupiah(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(dateStr));
+  } catch {
+    return dateStr;
+  }
+}
 
 /* ──────────────────────────── Sub-components ──────────────────────────── */
 
@@ -277,162 +271,289 @@ function OrderTimeline({ step }: { step: number }) {
   );
 }
 
-function ActiveOrderCard({ order }: { order: OrderItem }) {
+function OrderCard({
+  order,
+  onCancel,
+  onConfirm,
+  onUploadProof,
+  actionLoading,
+}: {
+  order: any;
+  onCancel: (id: number) => void;
+  onConfirm: (id: number) => void;
+  onUploadProof: (id: number) => void;
+  actionLoading: boolean;
+}) {
+  const isFinished = order.status === "completed" || order.status === "cancelled";
+  const firstItem = order.items[0];
+  const productName = firstItem?.product?.name || "Produk";
+  const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
+  const timelineStep = getTimelineStep(order.status);
+
   return (
-    <div className="bg-white rounded-2xl p-7 shadow-soft border border-outline-variant/10 hover:shadow-float hover:-translate-y-1 transition-all duration-300">
+    <div className={`bg-white rounded-2xl p-7 shadow-soft border border-outline-variant/10 transition-all duration-300 ${
+      isFinished ? "opacity-80 hover:opacity-100" : "hover:shadow-float hover:-translate-y-1"
+    }`}>
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between pb-5 border-b border-outline-variant/20 mb-7 gap-5">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center overflow-hidden">
-            <img alt={order.floristName} className="w-full h-full object-cover" src={order.floristImage} />
+            <span className="material-symbols-outlined text-secondary text-[24px]" style={FILL_STYLE}>shopping_bag</span>
           </div>
           <div>
-            <h3 className="text-[14px] font-semibold text-on-surface mb-0.5">{order.floristName}</h3>
-            <div className="flex gap-2 items-center">
-              <button className="text-[11px] font-semibold text-secondary hover:underline">Visit Store</button>
-              <span className="text-outline-variant text-[10px]">•</span>
-              <button className="text-[11px] font-semibold text-secondary hover:underline flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[13px]">chat_bubble</span>
-                Chat
-              </button>
-            </div>
+            <h3 className="text-[14px] font-semibold text-on-surface mb-0.5">
+              {productName}
+              {order.items.length > 1 && (
+                <span className="text-on-surface-variant font-normal"> +{order.items.length - 1} lainnya</span>
+              )}
+            </h3>
+            <p className="text-[11px] text-on-surface-variant">{formatDate(order.createdAt)}</p>
           </div>
         </div>
         <div className="flex flex-col items-start lg:items-end">
-          <span className={`${order.statusColor} px-3 py-1 rounded-full text-[11px] font-bold mb-1`}>
-            {order.status}
+          <span className={`${getStatusColor(order.status)} px-3 py-1 rounded-full text-[11px] font-bold mb-1`}>
+            {getStatusLabel(order.status)}
           </span>
-          <span className="text-[11px] text-on-surface-variant">Order ID: {order.orderId}</span>
+          <span className="text-[11px] text-on-surface-variant">Order #{order.orderNumber}</span>
         </div>
       </div>
 
-      {/* Body */}
+      {/* Body - Items */}
       <div className="flex flex-col md:flex-row gap-7 mb-8">
-        <div className="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0">
-          <img alt={order.bouquetName} className="w-full h-full object-cover" src={order.bouquetImage} />
+        <div className="flex-grow space-y-3">
+          {order.items.map((item) => (
+            <div key={item.id} className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {item.product ? (
+                  <img
+                    alt={item.product.name}
+                    className="w-full h-full object-cover"
+                    src={getProductImageUrl(item.product)}
+                  />
+                ) : (
+                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">local_florist</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-on-surface truncate">{item.product?.name || "Produk"}</p>
+                <p className="text-[11px] text-on-surface-variant">
+                  {item.variant ? item.variant.title : ""}
+                  {item.addon_product ? ` • ${item.addon_product}` : ""}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-[12px] font-semibold text-on-surface">
+                  {formatRupiah(item.variant?.price || item.product?.price || 0)}
+                </p>
+                <p className="text-[10px] text-on-surface-variant">×{item.quantity}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex-grow">
-          <h4 className="font-headline text-[22px] font-semibold text-primary mb-3">{order.bouquetName}</h4>
-          <div className="space-y-1.5 mb-3">
-            {order.details && (
-              <p className="text-[13px] text-on-surface-variant flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-                {order.details}
-              </p>
-            )}
-            <p className="text-[13px] text-on-surface-variant flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">person</span>
-              Recipient: {order.recipient}
-            </p>
-            {order.delivery && (
-              <p className="text-[13px] text-on-surface-variant flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                Delivery: {order.delivery}
-              </p>
-            )}
-          </div>
-          <span className="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-[11px]">
-            Qty: {order.qty}
-          </span>
-        </div>
+
+        {/* Price Summary */}
         <div className="w-full md:w-56 bg-surface-container-low rounded-2xl p-5 flex-shrink-0">
           <div className="space-y-2 mb-4">
             <div className="flex justify-between text-[11px] text-on-surface-variant">
-              <span>Subtotal</span>
-              <span>{order.subtotal}</span>
+              <span>Items ({totalQty})</span>
+              <span>{formatRupiah(order.total + Number(order.discount || 0))}</span>
             </div>
-            <div className="flex justify-between text-[11px] text-on-surface-variant">
-              <span>Delivery</span>
-              <span>{order.deliveryCost}</span>
-            </div>
+            {Number(order.discount) > 0 && (
+              <div className="flex justify-between text-[11px] text-secondary">
+                <span>Diskon</span>
+                <span>-{formatRupiah(Number(order.discount))}</span>
+              </div>
+            )}
             <div className="h-px bg-outline-variant/20 my-2" />
             <div className="flex justify-between text-[13px] font-semibold text-on-surface">
               <span>Total</span>
-              <span className="text-primary">{order.total}</span>
+              <span className="text-primary">{formatRupiah(order.total)}</span>
             </div>
           </div>
-          <button className="w-full py-3 bg-primary text-white rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95">
-            Track Progress
-          </button>
+          {order.payment && (
+            <p className="text-[11px] text-on-surface-variant text-center">
+              via {order.payment.payment_method.toUpperCase()}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Timeline + Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 border-t border-outline-variant/10 pt-8">
-        <div>
+      {/* Timeline */}
+      {!isFinished && (
+        <div className="border-t border-outline-variant/10 pt-8 mb-6">
           <h5 className="text-[13px] font-semibold text-on-surface mb-5 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[18px]">timeline</span>
-            Bouquet Timeline
+            Status Pesanan
           </h5>
-          <OrderTimeline step={order.timelineStep} />
+          <OrderTimeline step={timelineStep} />
         </div>
-        <div>
-          <h5 className="text-[13px] font-semibold text-on-surface mb-5 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[18px]">photo_camera</span>
-            Real-time Progress
-          </h5>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {order.progressImages?.map((img, i) => (
-              <div key={i} className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-                <img alt={`Progress ${i + 1}`} className="w-full h-full object-cover" src={img} />
-              </div>
-            ))}
-            <div className="w-20 h-20 rounded-xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant gap-1 cursor-not-allowed flex-shrink-0">
-              <span className="material-symbols-outlined text-[20px]">lock</span>
-              <span className="text-[10px]">Next update</span>
-            </div>
-          </div>
-        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-3 border-t border-outline-variant/10 pt-6">
+        {/* Cancel — only when pending */}
+        {order.status === "pending" && (
+          <button
+            disabled={actionLoading}
+            onClick={() => onCancel(order.id)}
+            className="px-5 py-2.5 border border-error/40 text-error rounded-full text-[13px] font-semibold hover:bg-error-container/20 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">close</span>
+              Batalkan Pesanan
+            </span>
+          </button>
+        )}
+
+        {/* Upload Proof — when pending or paid (re-upload) */}
+        {(order.status === "pending" || order.status === "paid") && (
+          <button
+            disabled={actionLoading}
+            onClick={() => onUploadProof(order.id)}
+            className="px-5 py-2.5 bg-primary text-white rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 disabled:opacity-50"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">upload</span>
+              {order.paymentProof ? "Upload Ulang Bukti" : "Upload Bukti Bayar"}
+            </span>
+          </button>
+        )}
+
+        {/* Confirm received — when shipped */}
+        {order.status === "shipped" && order.isCustomerConfirmed !== "true" && (
+          <button
+            disabled={actionLoading}
+            onClick={() => onConfirm(order.id)}
+            className="px-5 py-2.5 bg-secondary text-white rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 disabled:opacity-50"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              Pesanan Diterima
+            </span>
+          </button>
+        )}
+
+        {/* Completed — re-order */}
+        {order.status === "completed" && (
+          <Link
+            href="/"
+            className="px-5 py-2.5 bg-secondary text-white rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              Pesan Lagi
+            </span>
+          </Link>
+        )}
+
+        {/* Payment proof indicator */}
+        {order.paymentProof && (
+          <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-secondary-container/20 text-[12px] font-medium text-secondary">
+            <span className="material-symbols-outlined text-[15px]" style={FILL_STYLE}>verified</span>
+            Bukti bayar terkirim
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-function PastOrderCard({ order }: { order: OrderItem }) {
-  return (
-    <div className="bg-white rounded-2xl p-7 shadow-soft border border-outline-variant/10 opacity-80 hover:opacity-100 transition-all">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between pb-5 border-b border-outline-variant/20 mb-7 gap-5">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center overflow-hidden">
-            <img alt={order.floristName} className="w-full h-full object-cover" src={order.floristImage} />
-          </div>
-          <div>
-            <h3 className="text-[14px] font-semibold text-on-surface mb-0.5">{order.floristName}</h3>
-            <div className="flex gap-2 items-center">
-              <button className="text-[11px] font-semibold text-secondary hover:underline">Visit Store</button>
-              <span className="text-outline-variant text-[10px]">•</span>
-              <button className="text-[11px] font-semibold text-secondary hover:underline flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[13px]">chat_bubble</span>
-                Chat
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col items-start lg:items-end">
-          <span className={`${order.statusColor} px-3 py-1 rounded-full text-[11px] font-bold mb-1`}>
-            {order.status}
-          </span>
-          <span className="text-[11px] text-on-surface-variant">Order ID: {order.orderId}</span>
-        </div>
-      </div>
+/* ── Payment Proof Upload Modal ── */
 
-      {/* Body */}
-      <div className="flex flex-col md:flex-row gap-7">
-        <div className="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 grayscale-[0.15]">
-          <img alt={order.bouquetName} className="w-full h-full object-cover" src={order.bouquetImage} />
+function PaymentProofModal({
+  orderId,
+  onClose,
+  onSubmit,
+  isSubmitting,
+}: {
+  orderId: number;
+  onClose: () => void;
+  onSubmit: (file: File, note?: string) => void;
+  isSubmitting: boolean;
+}) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
+      <div className="bg-white rounded-2xl shadow-float w-full max-w-md mx-4 p-6 animate-[slideUp_0.3s_ease]">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-[16px] font-semibold text-on-surface">Upload Bukti Pembayaran</h3>
+          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface transition-colors">
+            <span className="material-symbols-outlined text-[22px]">close</span>
+          </button>
         </div>
-        <div className="flex-grow">
-          <h4 className="font-headline text-[22px] font-semibold text-on-surface mb-2">{order.bouquetName}</h4>
-          <p className="text-[13px] text-on-surface-variant mb-5">Recipient: {order.recipient}</p>
-          <div className="flex gap-3">
-            <button className="px-5 py-2.5 bg-secondary text-white rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95">
-              Buy Again
-            </button>
-            <button className="px-5 py-2.5 border border-outline-variant text-on-surface-variant rounded-full text-[13px] font-semibold hover:bg-surface-container transition-all">
-              Write Review
-            </button>
-          </div>
+
+        {/* File picker */}
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-outline-variant/40 rounded-xl p-6 text-center cursor-pointer hover:border-primary/60 transition-colors mb-4"
+        >
+          {preview ? (
+            <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded-lg object-contain" />
+          ) : (
+            <div className="space-y-2">
+              <span className="material-symbols-outlined text-[36px] text-on-surface-variant">cloud_upload</span>
+              <p className="text-[13px] text-on-surface-variant">Klik untuk pilih gambar bukti transfer</p>
+              <p className="text-[11px] text-outline">JPG, PNG, atau WebP (maks. 5MB)</p>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+
+        {/* Note */}
+        <div className="space-y-1.5 mb-5">
+          <label className="text-[12px] font-semibold text-on-surface-variant">Catatan <span className="font-normal text-outline">(opsional)</span></label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Mis: Transfer dari BCA a.n. John"
+            className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 border border-outline-variant/40 rounded-xl text-[13px] font-semibold text-on-surface-variant hover:bg-surface-container-high transition-all"
+          >
+            Batal
+          </button>
+          <button
+            disabled={!selectedFile || isSubmitting}
+            onClick={() => selectedFile && onSubmit(selectedFile, note || undefined)}
+            className="flex-1 px-4 py-3 bg-primary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Mengirim...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[16px]">send</span>
+                Kirim Bukti
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -444,9 +565,111 @@ function PastOrderCard({ order }: { order: OrderItem }) {
 export default function ProfilePage() {
   const [activeFilter, setActiveFilter] = useState<OrderFilter>("all");
   const [search, setSearch] = useState("");
+  const [uploadModalOrderId, setUploadModalOrderId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get("/api/user/orders", { withCredentials: true });
+      if (res.data?.status === "success") {
+        setOrders(res.data.data ?? []);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || "Gagal memuat pesanan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  /* ── Handlers ── */
+
+  const handleCancel = async (id: number) => {
+    if (!confirm("Apakah kamu yakin ingin membatalkan pesanan ini?")) return;
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      await axios.patch(`/api/user/orders/${id}/cancel`, {}, { withCredentials: true });
+      await fetchOrders();
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || err.message || "Gagal membatalkan pesanan");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirm = async (id: number) => {
+    if (!confirm("Konfirmasi bahwa pesanan sudah diterima dengan baik?")) return;
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      await axios.patch(`/api/user/orders/${id}/confirm`, {}, { withCredentials: true });
+      await fetchOrders();
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || err.message || "Gagal mengkonfirmasi pesanan");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUploadProof = async (file: File, note?: string) => {
+    if (!uploadModalOrderId) return;
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      if (note) formData.append("note", note);
+      await axios.post(`/api/user/orders/${uploadModalOrderId}/payment-proof`, formData, {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await fetchOrders();
+      setUploadModalOrderId(null);
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || err.message || "Gagal mengupload bukti pembayaran");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /* ── Filter & Search ── */
+
+  const filteredOrders = orders.filter((o) => {
+    if (activeFilter !== "all" && o.status !== activeFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchesOrder = o.orderNumber.toLowerCase().includes(q);
+      const matchesProduct = o.items.some(
+        (item) => item.product?.name.toLowerCase().includes(q)
+      );
+      return matchesOrder || matchesProduct;
+    }
+    return true;
+  });
 
   return (
     <main className="pt-8 pb-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto min-h-screen">
+      {/* Payment Proof Upload Modal */}
+      {uploadModalOrderId && (
+        <PaymentProofModal
+          orderId={uploadModalOrderId}
+          onClose={() => setUploadModalOrderId(null)}
+          onSubmit={handleUploadProof}
+          isSubmitting={actionLoading}
+        />
+      )}
+
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar */}
         <ProfileSidebar />
@@ -456,7 +679,7 @@ export default function ProfilePage() {
           {/* Header */}
           <div className="mb-10">
             <h1 className="font-headline text-[36px] leading-[44px] font-semibold text-on-surface mb-6">
-              My Orders
+              Pesanan Saya
             </h1>
 
             {/* Filter tabs */}
@@ -480,7 +703,7 @@ export default function ProfilePage() {
             <div className="mt-6 relative">
               <input
                 className="w-full bg-white border border-outline-variant/30 rounded-xl px-12 py-3.5 focus:ring-2 focus:ring-primary/20 text-[14px] transition-all"
-                placeholder="Search by florist, bouquet, recipient, or order #"
+                placeholder="Cari berdasarkan nama produk atau nomor pesanan..."
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -491,16 +714,59 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Error banner */}
+          {(error || actionError) && (
+            <div className="mb-6 flex items-center gap-2 p-4 rounded-xl bg-error-container/20 border border-error/20 text-[13px] text-error font-medium animate-[fadeIn_0.3s_ease]">
+              <span className="material-symbols-outlined text-[18px]">error</span>
+              {actionError || error}
+              <button onClick={() => setActionError(null)} className="ml-auto">
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <span className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <p className="text-[14px] text-on-surface-variant">Memuat pesanan...</p>
+            </div>
+          )}
+
           {/* Orders */}
-          <div className="space-y-6">
-            {ORDERS.map((order) =>
-              order.isPast ? (
-                <PastOrderCard key={order.id} order={order} />
+          {!loading && (
+            <div className="space-y-6">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-20">
+                  <span className="material-symbols-outlined text-[48px] text-outline-variant/40 mb-4 block">shopping_bag</span>
+                  <h3 className="text-[16px] font-semibold text-on-surface mb-1">Belum Ada Pesanan</h3>
+                  <p className="text-[13px] text-on-surface-variant mb-6">
+                    {activeFilter !== "all"
+                      ? "Tidak ada pesanan dengan filter ini."
+                      : "Yuk mulai belanja bunga favoritmu!"}
+                  </p>
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">storefront</span>
+                    Jelajahi Produk
+                  </Link>
+                </div>
               ) : (
-                <ActiveOrderCard key={order.id} order={order} />
-              )
-            )}
-          </div>
+                filteredOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onCancel={handleCancel}
+                    onConfirm={handleConfirm}
+                    onUploadProof={(id) => setUploadModalOrderId(id)}
+                    actionLoading={actionLoading}
+                  />
+                ))
+              )}
+            </div>
+          )}
 
           {/* Custom Bouquet History */}
           <div className="mt-14">
