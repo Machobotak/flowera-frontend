@@ -66,10 +66,19 @@ export default function AccountSidebar({ activeTab, onTabChange }: AccountSideba
           <span className="material-symbols-outlined text-[14px]">edit</span>
           Ubah Profil
         </a>
-        <a href={user?.roles?.includes("seller") ? "/store" : "/store/create"} className="w-full py-2.5 bg-secondary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 flex items-center justify-center gap-2 mb-6">
+        <a href={user?.roles?.includes("seller") ? "/store" : "/store/create"} className="w-full py-2.5 bg-secondary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 flex items-center justify-center gap-2 mb-3">
           <span className="material-symbols-outlined text-[18px]">storefront</span>
           {user?.roles?.includes("seller") ? "Lihat Toko" : "Buat Toko"}
         </a>
+
+        {user?.roles?.includes("admin") && (
+          <a href="/admin" className="w-full py-2.5 bg-primary text-white rounded-xl text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 flex items-center justify-center gap-2 mb-6">
+            <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+            Admin
+          </a>
+        )}
+
+        {!user?.roles?.includes("admin") && <div className="mb-3" />}
 
         {/* Nav links */}
         <nav className="w-full space-y-1">
