@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
@@ -91,11 +91,14 @@ export default function ProductDetailPage() {
   const params = useParams();
   const productId = params.id as string;
 
+  const router = useRouter();
+
   const [product, setProduct] = useState<ProductData | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [addons, setAddons] = useState<AddonProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isOrdering, setIsOrdering] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -351,8 +354,46 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="space-y-3">
-                <button className="w-full bg-[#8c4a5c] text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-opacity-90 transition-colors active:scale-[0.98]">
-                  Order Now
+                <button
+                  disabled={isOrdering}
+                  onClick={async () => {
+                    if (!product) return;
+                    setIsOrdering(true);
+                    try {
+                      const addonNames = selectedAddons.map((a) => a.title || a.name).filter(Boolean).join(", ");
+                      const payload = {
+                        items: [{
+                          product_id: product.id,
+                          quantity: 1,
+                          product_variant_id: selectedVariant?.id,
+                          addon_product: addonNames || undefined,
+                        }],
+                        payment_method: "transfer",
+                      };
+                      const res = await axios.post("/api/user/orders", payload, { withCredentials: true });
+                      if (res.data?.status === "success") {
+                        addToast("Pesanan berhasil dibuat! Mengarahkan ke halaman pesanan...", "success");
+                        setTimeout(() => router.push("/profile"), 1200);
+                      }
+                    } catch (err: any) {
+                      addToast(
+                        err.response?.data?.message || err.message || "Gagal membuat pesanan",
+                        "error"
+                      );
+                    } finally {
+                      setIsOrdering(false);
+                    }
+                  }}
+                  className="w-full bg-[#8c4a5c] text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-opacity-90 transition-colors active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-2"
+                >
+                  {isOrdering ? (
+                    <>
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    "Order Now"
+                  )}
                 </button>
                 <button className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]">
                   Add to Cart

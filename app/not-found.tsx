@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function NotFoundPage() {
+  const router = useRouter();
   return (
     <main className="relative min-h-screen flex items-center justify-center px-6 bg-surface overflow-hidden">
       {/* ────────── Decorative Background ────────── */}
@@ -86,16 +87,17 @@ export default function NotFoundPage() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto animate-[slideUp_0.5s_ease_0.3s_both]">
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={() => router.push("/")}
             className="flex-1 sm:flex-none px-8 py-4 bg-primary text-white rounded-xl text-[14px] font-semibold shadow-soft hover:shadow-float hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">home</span>
             Kembali ke Beranda
-          </Link>
+          </button>
           <button
             type="button"
-            onClick={() => window.history.back()}
+            onClick={() => router.back()}
             className="flex-1 sm:flex-none px-8 py-4 border border-outline-variant/40 text-on-surface rounded-xl text-[14px] font-semibold hover:bg-surface-container hover:border-outline-variant/60 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import axios from "axios";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -202,6 +203,10 @@ export default function CheckoutPage() {
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bca");
+
+  // Order result from API
+  const [createdOrder, setCreatedOrder] = useState<any | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   // Derived
   const subtotal = ORDER_ITEMS.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -551,7 +556,7 @@ export default function CheckoutPage() {
                   Silakan selesaikan pembayaran untuk mengkonfirmasi pesananmu.
                 </p>
                 <p className="text-[13px] font-semibold text-primary">
-                  Order ID: #FG-20260615-8742
+                  Order ID: #{createdOrder?.orderNumber || "..."}
                 </p>
               </div>
 
@@ -605,19 +610,38 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   disabled={isPaying}
-                  onClick={() => {
+                  onClick={async () => {
                     setIsPaying(true);
-                    setTimeout(() => {
+                    setOrderError(null);
+                    try {
+                      const payload = {
+                        items: ORDER_ITEMS.map((item) => ({
+                          product_id: Number(item.id),
+                          quantity: item.qty,
+                        })),
+                        payment_method: paymentMethod,
+                      };
+                      const res = await axios.post("/api/user/orders", payload, { withCredentials: true });
+                      if (res.data?.status === "success" && res.data?.data) {
+                        setCreatedOrder(res.data.data);
+                        setStep(4);
+                      }
+                    } catch (err: any) {
+                      setOrderError(
+                        err.response?.data?.message ||
+                        err.message ||
+                        "Gagal membuat pesanan"
+                      );
+                    } finally {
                       setIsPaying(false);
-                      setStep(4);
-                    }, 1500);
+                    }
                   }}
                   className="flex-1 bg-primary text-white py-4 rounded-xl font-body text-[14px] tracking-[0.05em] font-semibold shadow-soft hover:shadow-float hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait disabled:hover:scale-100"
                 >
                   {isPaying ? (
                     <>
                       <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Memproses Pembayaran...
+                      Memproses Pesanan...
                     </>
                   ) : (
                     <>
@@ -626,6 +650,12 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </button>
+                {orderError && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-error-container/20 border border-error/20 text-[13px] text-error font-medium">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
+                    {orderError}
+                  </div>
+                )}
                 <Link
                   href="/"
                   className="px-6 py-4 border border-outline-variant/40 rounded-xl font-body text-[14px] font-semibold text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-[0.98] text-center"
@@ -659,7 +689,7 @@ export default function CheckoutPage() {
                   </p>
                   <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-5 py-2.5 border border-secondary/20">
                     <span className="material-symbols-outlined text-primary text-[16px]">receipt_long</span>
-                    <span className="text-[14px] font-bold text-primary">Order ID: #FG-20260615-8742</span>
+                    <span className="text-[14px] font-bold text-primary">Order ID: #{createdOrder?.orderNumber || "..."}</span>
                   </div>
                 </div>
               </div>

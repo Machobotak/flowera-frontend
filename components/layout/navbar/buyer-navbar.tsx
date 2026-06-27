@@ -148,6 +148,20 @@ export default function BuyerNavbar() {
                       </a>
                     </div>
 
+                    {/* Admin Button */}
+                    {user.roles?.includes("admin") && (
+                      <div className="p-2 border-b border-outline-variant/20">
+                        <a
+                          href="/admin"
+                          className="flex items-center justify-center gap-2 w-full py-2 bg-primary text-white rounded-lg text-[13px] font-semibold hover:shadow-soft transition-all active:scale-95"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                          Admin
+                        </a>
+                      </div>
+                    )}
+
                     {/* Menu items */}
                     <div className="py-1">
                       {USER_MENU_ITEMS.map((item) => (
