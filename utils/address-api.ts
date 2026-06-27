@@ -1,6 +1,6 @@
 /**
  * Centralized API functions for user address endpoints.
- * All calls go through the Next.js rewrite proxy (/api/* → backend).
+ * Calls the backend directly via NEXT_PUBLIC_API_URL.
  *
  * Endpoints:
  *   POST   /api/user/address       → create address
@@ -19,25 +19,35 @@ import type {
   UpdateAddressPayload,
 } from "@/types/address";
 
-const BASE = "/api/user/address";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const BASE = `${API_BASE}/api/user/address`;
+
+/** Build axios config with Bearer token from localStorage */
+function authConfig() {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("accessToken")
+      : null;
+  return {
+    withCredentials: true,
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  };
+}
 
 /* ──────────────────────────── Create Address ──────────────────────────── */
 
 export async function createAddress(
   payload: CreateAddressPayload
 ): Promise<AddressDetailResponse> {
-  const res = await axios.post<AddressDetailResponse>(BASE, payload, {
-    withCredentials: true,
-  });
+  const res = await axios.post<AddressDetailResponse>(BASE, payload, authConfig());
   return res.data;
 }
 
 /* ──────────────────────────── List Addresses ──────────────────────────── */
 
 export async function getAddresses(): Promise<AddressListResponse> {
-  const res = await axios.get<AddressListResponse>(BASE, {
-    withCredentials: true,
-  });
+  const res = await axios.get<AddressListResponse>(BASE, authConfig());
   return res.data;
 }
 
@@ -46,9 +56,7 @@ export async function getAddresses(): Promise<AddressListResponse> {
 export async function getAddressDetail(
   id: number | string
 ): Promise<AddressDetailResponse> {
-  const res = await axios.get<AddressDetailResponse>(`${BASE}/${id}`, {
-    withCredentials: true,
-  });
+  const res = await axios.get<AddressDetailResponse>(`${BASE}/${id}`, authConfig());
   return res.data;
 }
 
@@ -61,7 +69,7 @@ export async function updateAddress(
   const res = await axios.patch<AddressDetailResponse>(
     `${BASE}/${id}`,
     payload,
-    { withCredentials: true }
+    authConfig()
   );
   return res.data;
 }
@@ -71,8 +79,6 @@ export async function updateAddress(
 export async function deleteAddress(
   id: number | string
 ): Promise<AddressDeleteResponse> {
-  const res = await axios.delete<AddressDeleteResponse>(`${BASE}/${id}`, {
-    withCredentials: true,
-  });
+  const res = await axios.delete<AddressDeleteResponse>(`${BASE}/${id}`, authConfig());
   return res.data;
 }

@@ -1,6 +1,6 @@
 /* ──────────────────────────── Profile Types ──────────────────────────── */
 
-/** Full user profile returned by GET /api/user/profile/detail */
+/** Full user profile returned by GET /api/user/profile/detail/ */
 export interface UserProfile {
   id: number;
   name: string;
@@ -24,7 +24,7 @@ export interface UserProfile {
   memberLabel?: string;
 }
 
-/** Payload for PUT /api/user/profile/update */
+/** Payload for PUT /api/user/profile/update/ */
 export interface UpdateProfilePayload {
   no_hp?: string;
   birth_place?: string;
