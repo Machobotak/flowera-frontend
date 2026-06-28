@@ -9,6 +9,7 @@ interface CartAddon {
   qty?: number;
   price: number;
   icon: string;
+  image?: string;
 }
 
 interface CartItem {
@@ -210,12 +211,16 @@ function CartItemCard({
             )}
 
             {/* Add-ons */}
-            {item.addons?.map((addon) => (
+            {item.addons?.map((addon, i) => (
               <span
-                key={addon.name}
+                key={`${addon.name}-${i}`}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container/20 text-[11px] font-medium text-on-secondary-container"
               >
-                <span className="material-symbols-outlined text-[13px]">{addon.icon}</span>
+                {addon.image ? (
+                  <img src={addon.image} alt={addon.name} className="w-4 h-4 rounded-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-[13px]">{addon.icon}</span>
+                )}
                 {addon.name}
                 {addon.qty && addon.qty > 1 && (
                   <span className="text-[10px] opacity-70">×{addon.qty}</span>
