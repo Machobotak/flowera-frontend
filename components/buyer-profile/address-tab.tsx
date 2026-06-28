@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
 import DeleteConfirmModal from "@/components/seller-product/delete-confirm-modal";
-import { searchDestinations } from "@/utils/shipping-api";
-import type { DestinationData } from "@/types/shipping";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -82,65 +80,6 @@ export default function AddressTab() {
     districts: false,
     subdistricts: false,
   });
-
-  // ─── Destination search (autocomplete) ────────────────────
-  const [destSearch, setDestSearch] = useState("");
-  const [destResults, setDestResults] = useState<DestinationData[]>([]);
-  const [destLoading, setDestLoading] = useState(false);
-  const [destOpen, setDestOpen] = useState(false);
-  const destRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /** Debounced search — fires 400ms after user stops typing */
-  const handleDestSearch = useCallback((value: string) => {
-    setDestSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (value.trim().length < 3) {
-      setDestResults([]);
-      setDestOpen(false);
-      return;
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      setDestLoading(true);
-      try {
-        const res = await searchDestinations(value.trim());
-        if (res.meta?.status === "success") {
-          setDestResults(res.data.slice(0, 10)); // max 10 results
-          setDestOpen(res.data.length > 0);
-        }
-      } catch {
-        setDestResults([]);
-      } finally {
-        setDestLoading(false);
-      }
-    }, 400);
-  }, []);
-
-  /** When user selects a destination from the dropdown */
-  const handleSelectDestination = (dest: DestinationData) => {
-    setFormProvinceName(dest.province_name);
-    setFormCityName(dest.city_name);
-    setFormDistrictName(dest.district_name);
-    setFormSubdistrictName(dest.subdistrict_name);
-    setFormSubdistrictId(String(dest.id));
-    setFormPostalCode(dest.zip_code);
-    setDestSearch(dest.label);
-    setDestOpen(false);
-    setDestResults([]);
-  };
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (destRef.current && !destRef.current.contains(e.target as Node)) {
-        setDestOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   // ─── Fetch addresses ─────────────────────────────────────
   const fetchAddresses = async () => {
@@ -267,9 +206,6 @@ export default function AddressTab() {
     setFormSubdistrictId(""); setFormSubdistrictName("");
     setCities([]); setDistricts([]); setSubdistricts([]);
     setEditingId(null);
-    setDestSearch("");
-    setDestResults([]);
-    setDestOpen(false);
   };
 
   const openAddForm = () => { resetForm(); setShowForm(true); };
@@ -404,48 +340,6 @@ export default function AddressTab() {
               <label className="text-[12px] font-semibold text-on-surface-variant">No. Telepon <span className="text-error">*</span></label>
               <input type="tel" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="08xxxxxxxxxx" className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required />
             </div>
-          </div>
-
-          {/* ═══ Destination Search (quick autocomplete) ═══ */}
-          <div ref={destRef} className="relative mb-4">
-            <label className="text-[12px] font-semibold text-on-surface-variant mb-1.5 block">
-              Cari Tujuan Pengiriman <span className="text-[10px] font-normal text-primary">(lebih cepat)</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={destSearch}
-                onChange={(e) => handleDestSearch(e.target.value)}
-                onFocus={() => { if (destResults.length > 0) setDestOpen(true); }}
-                placeholder="Ketik nama kelurahan, kecamatan, atau kota..."
-                className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all pl-10"
-              />
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">
-                {destLoading ? "progress_activity" : "search"}
-              </span>
-              {destLoading && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-              )}
-            </div>
-
-            {/* Dropdown results */}
-            {destOpen && destResults.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-outline-variant/30 rounded-xl shadow-float max-h-60 overflow-y-auto animate-[fadeIn_0.15s_ease]">
-                {destResults.map((dest) => (
-                  <button
-                    key={dest.id}
-                    type="button"
-                    onClick={() => handleSelectDestination(dest)}
-                    className="w-full text-left px-4 py-3 hover:bg-primary-container/10 transition-colors border-b border-outline-variant/10 last:border-0"
-                  >
-                    <p className="text-[13px] font-medium text-on-surface leading-snug">{dest.label}</p>
-                    <p className="text-[11px] text-on-surface-variant mt-0.5">
-                      {dest.subdistrict_name}, {dest.district_name}, {dest.city_name} — {dest.zip_code}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Row: Provinsi & Kota */}
