@@ -30,8 +30,10 @@ export default function ProductFormPage() {
   const {
     name, setName,
     price, setPrice,
+    weight, setWeight,
     description, setDescription,
     isLifeFlower, setIsLifeFlower,
+    subCategoryId, setSubCategoryId,
     isLoadingProduct, setIsLoadingProduct,
     isSubmitting,
     submitStep,
@@ -53,6 +55,24 @@ export default function ProductFormPage() {
   const [initialVariants, setInitialVariants] = useState<VariantFormEntry[]>([]);
   const [initialAddons, setInitialAddons] = useState<AddonFormEntry[]>([]);
 
+  // Sub-categories (menunggu endpoint seller-side dari backend)
+  const [subCategories, setSubCategories] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchSubCategories = async () => {
+      try {
+        const res = await axios.get("/api/seller/sub-product-categories", { withCredentials: true });
+        const data = res.data?.data ?? res.data ?? [];
+        if (Array.isArray(data)) {
+          setSubCategories(data.map((c: any) => ({ id: c.id, name: c.name || c.title || "" })));
+        }
+      } catch {
+        // Endpoint belum tersedia — dropdown akan kosong sampai backend menyediakan
+      }
+    };
+    fetchSubCategories();
+  }, []);
+
   // ─── Load existing data on edit mode ───
   useEffect(() => {
     if (!isEditMode) return;
@@ -67,8 +87,10 @@ export default function ProductFormPage() {
         // Load basic info
         setName(found.name || "");
         setPrice(String(found.price || ""));
+        setWeight(String(found.weight || ""));
         setDescription(found.description || "");
         setIsLifeFlower(found.isLifeFlower ?? true);
+        setSubCategoryId(String(found.sub_product_categories_id || found.subProductCategoriesId || ""));
 
         // Load images
         const existingImages = found.product_image || found.images || [];
@@ -214,10 +236,15 @@ export default function ProductFormPage() {
         onNameChange={setName}
         price={price}
         onPriceChange={(v) => setPrice(v)}
+        weight={weight}
+        onWeightChange={(v) => setWeight(v)}
         description={description}
         onDescriptionChange={setDescription}
         isLifeFlower={isLifeFlower}
         onLifeFlowerChange={setIsLifeFlower}
+        subCategoryId={subCategoryId}
+        onSubCategoryChange={setSubCategoryId}
+        subCategories={subCategories}
       />
 
       <VariantSection

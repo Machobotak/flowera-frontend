@@ -8,10 +8,15 @@ interface ProductInfoSectionProps {
   onNameChange: (v: string) => void;
   price: string;
   onPriceChange: (rawValue: string) => void;
+  weight: string;
+  onWeightChange: (rawValue: string) => void;
   description: string;
   onDescriptionChange: (v: string) => void;
   isLifeFlower: boolean;
   onLifeFlowerChange: (v: boolean) => void;
+  subCategoryId: string;
+  onSubCategoryChange: (v: string) => void;
+  subCategories: { id: number; name: string }[];
 }
 
 /**
@@ -22,10 +27,15 @@ export default function ProductInfoSection({
   onNameChange,
   price,
   onPriceChange,
+  weight,
+  onWeightChange,
   description,
   onDescriptionChange,
   isLifeFlower,
   onLifeFlowerChange,
+  subCategoryId,
+  onSubCategoryChange,
+  subCategories,
 }: ProductInfoSectionProps) {
   return (
     <div className="bg-white rounded-2xl p-6 md:p-8 shadow-soft border border-outline-variant/20">
@@ -60,6 +70,31 @@ export default function ProductInfoSection({
           />
         </div>
 
+        {/* Sub Category */}
+        <div className="space-y-2">
+          <label className="text-[13px] font-semibold text-on-surface-variant">
+            Kategori <span className="text-error">*</span>
+          </label>
+          <select
+            value={subCategoryId}
+            onChange={(e) => onSubCategoryChange(e.target.value)}
+            className="w-full px-5 py-4 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[14px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none outline-none"
+          >
+            <option value="">Pilih Kategori</option>
+            {subCategories.length === 0 ? (
+              <option value="" disabled>
+                Tidak ada kategori tersedia — hubungi admin
+              </option>
+            ) : (
+              subCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
         {/* Price */}
         <div className="space-y-2">
           <label className="text-[13px] font-semibold text-on-surface-variant">
@@ -70,6 +105,29 @@ export default function ProductInfoSection({
             onChange={onPriceChange}
             placeholder="0"
           />
+        </div>
+
+        {/* Weight */}
+        <div className="space-y-2">
+          <label className="text-[13px] font-semibold text-on-surface-variant">
+            Estimasi Berat (gram)
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={weight}
+              onChange={(e) => onWeightChange(e.target.value.replace(/\D/g, ""))}
+              placeholder="Contoh: 500"
+              className="w-full px-5 py-4 pr-14 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[14px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant outline-none"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-medium text-on-surface-variant">
+              gram
+            </span>
+          </div>
+          <p className="text-[11px] text-on-surface-variant">
+            Berat digunakan untuk menghitung ongkos kirim. Minimal 100 gram.
+          </p>
         </div>
 
         {/* Description */}
