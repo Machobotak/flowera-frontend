@@ -12,29 +12,21 @@
 
 export interface UserAddress {
   id: number;
-  user_id?: number;
-  label?: string; // e.g. "Rumah", "Kantor"
-  nama_penerima?: string; // nama penerima
-  name?: string; // alias for nama_penerima
-  recipient_name?: string; // alias for nama_penerima
-  no_hp?: string; // no HP penerima
-  phone?: string; // alias for no_hp
-  phone_number?: string; // alias for no_hp
-  address?: string; // full address string
-  street?: string;
-  city?: string;
-  city_id?: number | string;
-  province?: string;
-  province_id?: number | string;
-  district?: string;
-  district_id?: number | string;
-  postal_code?: string;
-  postalCode?: string;
-  is_default?: boolean;
-  isDefault?: boolean;
+  nama_penerima: string;
+  no_hp: string;
+  address: string; // detail jalan / RT RW
   note?: string;
-  created_at?: string;
-  updated_at?: string;
+
+  // Regional fields (matching Address entity)
+  province_name?: string;
+  city_name?: string;
+  district_name?: string;
+  subdistrict_name?: string;
+  zip_code?: string;
+  subdistrict_id?: string;
+
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /* ──────────────────────────── API Responses ──────────────────────────── */
@@ -61,8 +53,14 @@ export interface AddressDeleteResponse {
 export interface CreateAddressPayload {
   nama_penerima: string;
   no_hp: string;
-  address: string; // full address (jalan, kec, kota, prov, kode pos)
+  address: string; // detail jalan
   note?: string;
+  province_name?: string;
+  city_name?: string;
+  district_name?: string;
+  subdistrict_name?: string;
+  zip_code?: string;
+  subdistrict_id?: string;
 }
 
 export interface UpdateAddressPayload {
@@ -70,5 +68,10 @@ export interface UpdateAddressPayload {
   no_hp?: string;
   address?: string;
   note?: string;
-  is_default?: boolean;
+  province_name?: string;
+  city_name?: string;
+  district_name?: string;
+  subdistrict_name?: string;
+  zip_code?: string;
+  subdistrict_id?: string;
 }

@@ -287,7 +287,7 @@ function OrderCard({
   const isFinished = order.status === "completed" || order.status === "cancelled";
   const firstItem = order.items[0];
   const productName = firstItem?.product?.name || "Produk";
-  const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
+  const totalQty = order.items.reduce((s: number, i: any) => s + i.quantity, 0);
   const timelineStep = getTimelineStep(order.status);
 
   return (
@@ -321,7 +321,7 @@ function OrderCard({
       {/* Body - Items */}
       <div className="flex flex-col md:flex-row gap-7 mb-8">
         <div className="flex-grow space-y-3">
-          {order.items.map((item) => (
+          {order.items.map((item: any) => (
             <div key={item.id} className="flex gap-3 items-center">
               <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {item.product ? (
@@ -651,7 +651,7 @@ export default function ProfilePage() {
       const q = search.toLowerCase();
       const matchesOrder = o.orderNumber.toLowerCase().includes(q);
       const matchesProduct = o.items.some(
-        (item) => item.product?.name.toLowerCase().includes(q)
+        (item: any) => item.product?.name.toLowerCase().includes(q)
       );
       return matchesOrder || matchesProduct;
     }

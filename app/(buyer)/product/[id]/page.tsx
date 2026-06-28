@@ -55,6 +55,7 @@ interface ProductData {
   description: string | null;
   rating: number;
   isLifeFlower: number;
+  weight?: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -65,6 +66,12 @@ interface ProductData {
     slug: string;
     logo: string | null;
     city: string;
+    city_name?: string;
+    province_name?: string;
+    district_name?: string;
+    subdistrict_name?: string;
+    zip_code?: string;
+    subdistrict_id?: string;
   } | null;
 }
 
@@ -98,7 +105,6 @@ export default function ProductDetailPage() {
   const [addons, setAddons] = useState<AddonProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [isOrdering, setIsOrdering] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -112,8 +118,23 @@ export default function ProductDetailPage() {
         withCredentials: true,
       });
       if (res.data?.status === "success" && res.data?.data) {
-        const { product: productData, product_variant, addon_product } = res.data.data;
-        setProduct(productData);
+        const { product: productData, product_variant, addon_product, store } = res.data.data;
+        // Merge store from top-level response if product doesn't have it
+        // Normalize store data from various possible API response structures
+      const rawStore = productData?.store || store || null;
+      const normalizedStore = rawStore ? {
+        id: rawStore.id ?? rawStore.store_id ?? 0,
+        name: rawStore.name ?? rawStore.store_name ?? rawStore.nama_toko ?? "",
+        slug: rawStore.slug ?? rawStore.store_slug ?? "",
+        logo: rawStore.logo ?? rawStore.image_url ?? rawStore.logo_url ?? rawStore.avatar ?? null,
+        city: rawStore.city ?? rawStore.kota ?? rawStore.city_name ?? "",
+      } : null;
+
+      const mergedProduct: ProductData = {
+        ...productData,
+        store: normalizedStore,
+      };
+        setProduct(mergedProduct);
         setVariants(product_variant || []);
         setAddons(addon_product || []);
         if (product_variant && product_variant.length > 0) {
@@ -189,18 +210,6 @@ export default function ProductDetailPage() {
 
           {/* Center: Info */}
           <div className="lg:col-span-4 flex flex-col justify-start space-y-5">
-            {/* Store link */}
-            {product.store && (
-              <Link href={`/store/${product.store.slug}`} className="flex items-center gap-3 group">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-primary-container/50">
-                  <img className="w-full h-full object-cover" src={getImgUrl(product.store.logo)} alt={product.store.name} />
-                </div>
-                <div>
-                  <p className="text-[13px] text-on-surface-variant">Dari</p>
-                  <p className="text-[14px] font-semibold text-primary group-hover:underline">{product.store.name}</p>
-                </div>
-              </Link>
-            )}
 
             <h1 className="font-headline text-[28px] font-bold text-on-surface leading-tight">{product.name}</h1>
 
@@ -210,10 +219,6 @@ export default function ProductDetailPage() {
             </div>
 
             <p className="text-[28px] font-bold text-primary">Rp {variantPrice.toLocaleString("id-ID")}</p>
-
-            {product.description && (
-              <p className="text-[14px] text-on-surface-variant leading-relaxed">{product.description}</p>
-            )}
 
             {/* Life flower badge */}
             {product.isLifeFlower === 1 && (
@@ -302,13 +307,43 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Location */}
-            {product.store?.city && (
-              <p className="flex items-center gap-1.5 text-[13px] text-on-surface-variant">
-                <span className="material-symbols-outlined text-[16px] text-outline">location_on</span>
-                {product.store.city}
-              </p>
+            {/* Description */}
+            {product.description && (
+              <p className="text-[14px] text-on-surface-variant leading-relaxed">{product.description}</p>
             )}
+
+            {/* Store link — below description */}
+            {(product.store || (product as any).store_name || (product as any).store_id) && (
+              <Link
+                href={`/store/${product.store?.slug || (product as any).store_slug || (product as any).slug || ""}`}
+                className="flex items-center gap-3 group"
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary-container/30 flex-shrink-0">
+                  <img
+                    className="w-full h-full object-cover"
+                    src={getImgUrl(
+                      product.store?.logo ||
+                      (product as any).store_logo ||
+                      (product as any).store_image ||
+                      (product as any).image_url
+                    )}
+                    alt={product.store?.name || (product as any).store_name || "Toko"}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
+                    {product.store?.name || (product as any).store_name || (product as any).nama_toko || "Toko"}
+                  </p>
+                  {(product.store?.city_name || product.store?.city || (product as any).store_city || (product as any).city_name || (product as any).city) && (
+                    <p className="text-[12px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+                      <span className="material-symbols-outlined text-[14px]">location_on</span>
+                      {product.store?.city_name || product.store?.city || (product as any).store_city || (product as any).city_name}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            )}
+
           </div>
 
           {/* Right: Order Summary */}
@@ -355,45 +390,69 @@ export default function ProductDetailPage() {
 
               <div className="space-y-3">
                 <button
-                  disabled={isOrdering}
-                  onClick={async () => {
+                  onClick={() => {
                     if (!product) return;
-                    setIsOrdering(true);
-                    try {
-                      const addonNames = selectedAddons.map((a) => a.title || a.name).filter(Boolean).join(", ");
-                      const payload = {
-                        items: [{
-                          product_id: product.id,
-                          quantity: 1,
-                          product_variant_id: selectedVariant?.id,
-                          addon_product: addonNames || undefined,
-                        }],
-                        payment_method: "transfer",
-                      };
-                      const res = await axios.post("/api/user/orders", payload, { withCredentials: true });
-                      if (res.data?.status === "success") {
-                        addToast("Pesanan berhasil dibuat! Mengarahkan ke halaman pesanan...", "success");
-                        setTimeout(() => router.push("/profile"), 1200);
-                      }
-                    } catch (err: any) {
-                      addToast(
-                        err.response?.data?.message || err.message || "Gagal membuat pesanan",
-                        "error"
-                      );
-                    } finally {
-                      setIsOrdering(false);
-                    }
+
+                    // Get the first product image
+                    const defaultImg =
+                      product.product_image?.find((img) => img.isDefault === 1) ||
+                      product.product_image?.[0];
+                    const productImage = defaultImg
+                      ? resolveImageUrl(defaultImg.image_url)
+                      : "https://ui-avatars.com/api/?name=Product&background=8c4a5c&color=fff";
+
+                    // Build checkout item for direct buy (flexible field access)
+                    const storeId =
+                      product.store?.id ||
+                      (product as any).store_id ||
+                      (product as any).toko_id ||
+                      0;
+                    const storeName =
+                      product.store?.name ||
+                      (product as any).store_name ||
+                      (product as any).nama_toko ||
+                      "Florist";
+
+                    // Map selected addons for checkout display (include image)
+                    const mappedAddons = selectedAddons.map((a) => ({
+                      name: a.title || a.name || "Add-on",
+                      price: a.price,
+                      icon: "add_circle",
+                      image: getAddonImgUrl(a) || undefined,
+                    }));
+
+                    // Get store's origin zip for accurate shipping cost
+                    const originZip =
+                      product.store?.zip_code ||
+                      (product as any).store_zip_code ||
+                      "";
+
+                    const checkoutItem = {
+                      product_id: product.id,
+                      product_variant_id: selectedVariant?.id ?? undefined,
+                      store_id: storeId,
+                      name: product.name,
+                      florist: storeName,
+                      price: totalPrice,
+                      qty: 1,
+                      image: productImage,
+                      weight_gram: product.weight || 500,
+                      origin_zip: originZip,
+                      addons: mappedAddons.length > 0 ? mappedAddons : undefined,
+                    };
+
+                    // Store in sessionStorage so checkout page can pick it up
+                    sessionStorage.setItem(
+                      "directCheckoutItems",
+                      JSON.stringify([checkoutItem])
+                    );
+
+                    router.push("/checkout");
                   }}
-                  className="w-full bg-[#8c4a5c] text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-opacity-90 transition-colors active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-2"
+                  className="w-full bg-[#8c4a5c] text-white py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-opacity-90 transition-colors active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  {isOrdering ? (
-                    <>
-                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Memproses...
-                    </>
-                  ) : (
-                    "Order Now"
-                  )}
+                  Order Now
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </button>
                 <button className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]">
                   Add to Cart

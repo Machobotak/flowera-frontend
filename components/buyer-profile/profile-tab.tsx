@@ -23,6 +23,7 @@ export default function ProfileTab() {
   const [avatar, setAvatar] = useState(user?.avatar || "");
 
   useEffect(() => {
+    if (!user) return; // wait for auth to be ready
     const fetchProfile = async () => {
       try {
         const res = await getProfileDetail();
@@ -47,11 +48,16 @@ export default function ProfileTab() {
         }
         setGender(data.gender || "");
         setAvatar(data.avatar || data.image_url || "");
-      } catch { /* silent */ }
+      } catch (err: any) {
+        // 404 = profile belum ada di database → tampilkan form kosong (bukan error)
+        if (err?.response?.status !== 404) {
+          console.warn("Gagal memuat profil:", err.message);
+        }
+      }
       finally { setLoading(false); }
     };
     fetchProfile();
-  }, []);
+  }, [user]);
 
   const handleSave = async () => {
     setSaving(true);

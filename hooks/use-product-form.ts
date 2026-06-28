@@ -35,8 +35,10 @@ export function useProductForm({
   // ─── Product state ───
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [weight, setWeight] = useState("");
   const [description, setDescription] = useState("");
   const [isLifeFlower, setIsLifeFlower] = useState(true);
+  const [subCategoryId, setSubCategoryId] = useState("");
 
   // ─── Page state ───
   const [isLoadingProduct, setIsLoadingProduct] = useState(isEditMode);
@@ -66,6 +68,10 @@ export function useProductForm({
       addToast("Harga produk harus lebih dari 0", "error");
       return;
     }
+    if (!subCategoryId) {
+      addToast("Pilih kategori produk terlebih dahulu", "error");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -83,8 +89,10 @@ export function useProductForm({
           {
             name: name.trim(),
             price: parseInt(price),
+            weight: parseInt(weight) || undefined,
             description: description.trim() || undefined,
             isLifeFlower,
+            sub_product_categories_id: parseInt(subCategoryId),
           },
           { withCredentials: true }
         );
@@ -108,8 +116,10 @@ export function useProductForm({
           {
             name: name.trim(),
             price: parseInt(price),
+            weight: parseInt(weight) || undefined,
             description: description.trim() || undefined,
             isLifeFlower,
+            sub_product_categories_id: parseInt(subCategoryId),
           },
           { withCredentials: true }
         );
@@ -227,10 +237,14 @@ export function useProductForm({
     setName,
     price,
     setPrice,
+    weight,
+    setWeight,
     description,
     setDescription,
     isLifeFlower,
     setIsLifeFlower,
+    subCategoryId,
+    setSubCategoryId,
 
     // Page state
     isLoadingProduct,
