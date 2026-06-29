@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useAuth } from "@/contexts/auth-context";
-import { getBuyerOrders, confirmOrderImage } from "@/utils/user-order-api";
+import { getBuyerOrders, confirmOrderImage, confirmReceived } from "@/utils/user-order-api";
 import { getBuyerStatusLabel, getBuyerFilterKey, deriveServiceFee } from "@/utils/order-utils";
 import { getProductImageUrl } from "@/utils/image-url";
 import QrLightbox from "@/components/buyer-checkout/qr-lightbox";
@@ -189,11 +189,11 @@ function ProfileSidebar() {
             Pesanan Saya
           </a>
 
-          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold tracking-[0.05em] text-on-surface-variant hover:bg-surface-container transition-colors">
+          <a href="/coming-soon" className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold tracking-[0.05em] text-on-surface-variant hover:bg-surface-container transition-colors">
             <span className="material-symbols-outlined text-[20px]">notifications</span>
             Notifikasi
           </a>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold tracking-[0.05em] text-on-surface-variant hover:bg-surface-container transition-colors">
+          <a href="/coming-soon" className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold tracking-[0.05em] text-on-surface-variant hover:bg-surface-container transition-colors">
             <span className="material-symbols-outlined text-[20px]">favorite</span>
             Wishlist
           </a>
@@ -201,8 +201,8 @@ function ProfileSidebar() {
           <div className="h-px bg-outline-variant/30 my-4" />
 
           {[
-            { icon: "confirmation_number", label: "Voucher", href: "#" },
-            { icon: "settings", label: "Pengaturan", href: "#" },
+            { icon: "confirmation_number", label: "Voucher", href: "/coming-soon" },
+            { icon: "settings", label: "Pengaturan", href: "/coming-soon" },
           ].map((link) => (
             <a
               key={link.label}
@@ -393,11 +393,13 @@ function OrderCard({
   order,
   onConfirmImage,
   onRejectImage,
+  onConfirmReceived,
   actionLoading,
 }: {
   order: UserOrder;
   onConfirmImage: (imageId: number, replyNote?: string) => void;
   onRejectImage: (imageId: number, replyNote?: string) => void;
+  onConfirmReceived: (orderId: number) => void;
   actionLoading: boolean;
 }) {
   const isFinished = order.status === "COMPLETED" || order.status === "CANCELLED" || order.status === "EXPIRED" || order.status === "DITERIMA";
@@ -660,12 +662,25 @@ function OrderCard({
           </span>
         )}
 
-        {/* DELIVERY — order in transit */}
+        {/* DELIVERY — confirm received */}
         {order.status === "DELIVERY" && (
-          <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-secondary-container/20 text-[12px] font-medium text-secondary">
-            <span className="material-symbols-outlined text-[15px]">local_shipping</span>
-            Dalam pengiriman
-          </span>
+          <button
+            onClick={() => onConfirmReceived(order.id)}
+            disabled={actionLoading}
+            className="px-5 py-2.5 bg-secondary text-white rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {actionLoading ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Memproses...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                Pesanan Diterima
+              </>
+            )}
+          </button>
         )}
 
         {/* Completed / DITERIMA — re-order */}
@@ -734,6 +749,23 @@ export default function ProfilePage() {
       }
     } catch (err: any) {
       setActionError(err.response?.data?.message || err.message || "Gagal mengkonfirmasi gambar");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmReceived = async (orderId: number) => {
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      const res = await confirmReceived(orderId);
+      if (res.status === "success") {
+        await fetchOrders();
+      } else {
+        setActionError(res.message || "Gagal mengkonfirmasi");
+      }
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || err.message || "Gagal mengkonfirmasi");
     } finally {
       setActionLoading(false);
     }
@@ -871,6 +903,7 @@ export default function ProfilePage() {
                     order={order}
                     onConfirmImage={handleConfirmImage}
                     onRejectImage={handleRejectImage}
+                    onConfirmReceived={handleConfirmReceived}
                     actionLoading={actionLoading}
                   />
                 ))

@@ -460,10 +460,10 @@ export default function ProductDetailPage() {
                 >
                   Add to Cart
                 </button>
-                <button className="w-full text-[#8c4a5c] py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-[#8c4a5c]/5 rounded-lg transition-colors">
+                <Link href="/coming-soon" className="w-full text-[#8c4a5c] py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-[#8c4a5c]/5 rounded-lg transition-colors">
                   <span className="material-symbols-outlined text-sm">favorite_border</span>
                   Save Design
-                </button>
+                </Link>
               </div>
             </div>
           </div>

@@ -17,9 +17,9 @@ const MOBILE_NAV_ITEMS = [
 const USER_MENU_ITEMS = [
   { icon: "person", label: "Akun Saya", href: "/profile/account" },
   { icon: "shopping_bag", label: "Pesanan Saya", href: "/profile" },
-  { icon: "favorite", label: "Wishlist", href: "#" },
-  { icon: "confirmation_number", label: "Voucher", href: "#" },
-  { icon: "settings", label: "Pengaturan", href: "#" },
+  { icon: "favorite", label: "Wishlist", href: "/coming-soon" },
+  { icon: "confirmation_number", label: "Voucher", href: "/coming-soon" },
+  { icon: "settings", label: "Pengaturan", href: "/coming-soon" },
 ];
 
 /* ──────────────────────────── Component ──────────────────────────── */
@@ -84,11 +84,11 @@ export default function BuyerNavbar() {
                   shopping_cart
                 </span>
               </a>
-              <button className="hover:opacity-80 transition-opacity">
+              <a href="/coming-soon" className="hover:opacity-80 transition-opacity">
                 <span className="material-symbols-outlined text-on-surface-variant">
                   notifications
                 </span>
-              </button>
+              </a>
             </div>
 
             {/* ── Auth Section ── */}

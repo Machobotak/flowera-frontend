@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function CartPage() {
-  redirect("/cooming-soon");
+  redirect("/coming-soon");
 }

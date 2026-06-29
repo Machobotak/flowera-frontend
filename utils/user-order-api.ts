@@ -37,6 +37,17 @@ export async function getBuyerOrders(): Promise<UserOrderListResponse> {
 
 /* ──────────────────────────── Confirm Order Image ──────────────────────────── */
 
+export async function confirmReceived(
+  orderId: number
+): Promise<ConfirmOrderImageResponse> {
+  const res = await axios.patch<ConfirmOrderImageResponse>(
+    `${API_BASE}/api/user/order/${orderId}/confirm-received`,
+    {},
+    authConfig()
+  );
+  return res.data;
+}
+
 export async function confirmOrderImage(
   orderImageId: number,
   payload: ConfirmOrderImagePayload
