@@ -116,14 +116,13 @@ export default function AddressTab() {
     const fetchProvinces = async () => {
       setIsLoadingRegions((p) => ({ ...p, provinces: true }));
       try {
-        const res = await fetch("/regional-api/provinces");
-        const json = await res.json();
-        setProvinces(json.data || []);
+        const res = await axios.get("/regional-api/provinces");
+        setProvinces(res.data?.data || []);
       } catch { /* silent */ }
       finally { setIsLoadingRegions((p) => ({ ...p, provinces: false })); }
     };
-    if (provinces.length === 0) fetchProvinces();
-  }, [provinces.length]);
+    fetchProvinces();
+  }, []);
 
   // ─── Regional API: Cities ─────────────────────────────────
   useEffect(() => {
@@ -131,9 +130,8 @@ export default function AddressTab() {
     const fetchCities = async () => {
       setIsLoadingRegions((p) => ({ ...p, cities: true }));
       try {
-        const res = await fetch(`/regional-api/cities/${formProvinceId}`);
-        const json = await res.json();
-        const cityList: Region[] = json.data || [];
+        const res = await axios.get(`/regional-api/cities/${formProvinceId}`);
+        const cityList: Region[] = res.data?.data || [];
         setCities(cityList);
         if (pendingCityName.current) {
           const cityId = findRegionId(cityList, pendingCityName.current);
@@ -152,9 +150,8 @@ export default function AddressTab() {
     const fetchDistricts = async () => {
       setIsLoadingRegions((p) => ({ ...p, districts: true }));
       try {
-        const res = await fetch(`/regional-api/districts/${formCityId}`);
-        const json = await res.json();
-        const distList: Region[] = json.data || [];
+        const res = await axios.get(`/regional-api/districts/${formCityId}`);
+        const distList: Region[] = res.data?.data || [];
         setDistricts(distList);
         if (pendingDistrictName.current) {
           const distId = findRegionId(distList, pendingDistrictName.current);
@@ -173,9 +170,8 @@ export default function AddressTab() {
     const fetchSubdistricts = async () => {
       setIsLoadingRegions((p) => ({ ...p, subdistricts: true }));
       try {
-        const res = await fetch(`/regional-api/villages/${formDistrictId}`);
-        const json = await res.json();
-        const subList: Region[] = json.data || [];
+        const res = await axios.get(`/regional-api/villages/${formDistrictId}`);
+        const subList: Region[] = res.data?.data || [];
         setSubdistricts(subList);
         if (pendingSubdistrictName.current) {
           const subId = findRegionId(subList, pendingSubdistrictName.current);
