@@ -80,6 +80,14 @@ export interface CheckoutPreviewData {
   total: number;
   discount: number;
   grand_total: number;
+  items?: unknown[];
+  shipping_options?: unknown[];
+  summary?: {
+    items_total: number;
+    service_fee: number;
+    discount: number;
+    estimated_total: number;
+  };
 }
 
 export interface CheckoutPreviewResponse {

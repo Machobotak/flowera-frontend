@@ -23,6 +23,7 @@ interface OrderSummarySidebarProps {
   subtotal: number;
   itemCount: number;
   shippingTotal: number;
+  serviceFee: number;
   total: number;
   selectedShipping: Record<number, ShippingOption>;
 }
@@ -32,6 +33,7 @@ export default function OrderSummarySidebar({
   subtotal,
   itemCount,
   shippingTotal,
+  serviceFee,
   total,
   selectedShipping,
 }: OrderSummarySidebarProps) {
@@ -81,6 +83,10 @@ export default function OrderSummarySidebar({
                 ))}
               </>
             )}
+            <div className="flex justify-between text-[13px]">
+              <span className="text-on-surface-variant">Biaya Layanan</span>
+              <span className="font-medium text-on-surface">{formatRupiah(serviceFee)}</span>
+            </div>
             <hr className="border-outline-variant/30" />
             <div className="flex justify-between items-center pt-1">
               <span className="font-bold text-on-surface text-[15px]">Total Pembayaran</span>

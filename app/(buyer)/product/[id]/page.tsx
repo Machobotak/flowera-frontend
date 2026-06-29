@@ -454,7 +454,10 @@ export default function ProductDetailPage() {
                   Order Now
                   <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </button>
-                <button className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]">
+                <button
+                  onClick={() => addToast("Fitur keranjang sedang dalam pengembangan", "info")}
+                  className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]"
+                >
                   Add to Cart
                 </button>
                 <button className="w-full text-[#8c4a5c] py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-[#8c4a5c]/5 rounded-lg transition-colors">
