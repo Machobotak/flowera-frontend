@@ -88,20 +88,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const validateSession = async () => {
       try {
         const token = localStorage.getItem("accessToken");
-        if (!token) {
-          setIsLoading(false);
-          return;
-        }
 
+        // Try with token from localStorage first, fallback to cookie-based auth
         const res = await axios.get(`${API_URL}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` }
+          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
         });
-        
+
         if (res.data) {
           const validatedUser = buildUser(res.data);
-          
-          // Set default header for future requests
-          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+          // Set default header for future requests if we have a token
+          if (token) {
+            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          }
 
           localStorage.setItem(
             "user",
