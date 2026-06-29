@@ -274,9 +274,17 @@ export default function AdminDashboard() {
         getAdminOrders(),
       ]);
 
-      const users = usersRes.status === "success" ? usersRes.data ?? [] : [];
-      const sellers = sellersRes.status === "success" ? sellersRes.data ?? [] : [];
-      const orders = ordersRes.status === "success" ? ordersRes.data ?? [] : [];
+      let users = usersRes.status === "success" ? usersRes.data ?? [] : [];
+      let sellers = sellersRes.status === "success" ? sellersRes.data ?? [] : [];
+      let orders = ordersRes.status === "success" ? ordersRes.data ?? [] : [];
+
+      // Filter out "Unknown" entries
+      users = users.filter((u: any) => u.name && u.name !== "Unknown");
+      sellers = sellers.filter((s: any) => {
+        const userName = s.user?.name;
+        const storeName = s.store?.name;
+        return userName && userName !== "Unknown" && (!storeName || storeName !== "Unknown");
+      });
 
       setTotalUsers(users.length);
       setTotalSellers(sellers.length);

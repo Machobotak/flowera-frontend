@@ -261,7 +261,13 @@ function ExploreSection() {
             </div>
           ) : displayProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
-              {displayProducts.map((product) => (
+              {displayProducts
+                .filter((p: any) => {
+                  const hasStore = p.store?.name && p.store.name !== "Unknown";
+                  const hasName = p.name && p.name !== "Unknown";
+                  return hasStore && hasName;
+                })
+                .map((product) => (
                 <ProductCard
                   key={product.id}
                   name={product.name}

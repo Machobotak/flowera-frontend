@@ -12,6 +12,7 @@ interface CheckoutItemInput {
   weight_gram: number;
   store_id: number;
   price: number;
+  addon_product?: string;
 }
 
 export function useCheckoutFlow() {

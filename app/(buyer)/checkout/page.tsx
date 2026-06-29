@@ -240,6 +240,16 @@ export default function CheckoutPage() {
     }
   }, [paymentStatus, router]);
 
+  // Warn before leaving after checkout (step 5 = payment screen)
+  useEffect(() => {
+    if (step !== 5) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step]);
+
   function handleCheckPayment() {
     checkPaymentStatus(createdOrder);
   }

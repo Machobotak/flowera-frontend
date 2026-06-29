@@ -16,6 +16,8 @@ export interface CheckoutItemInput {
   weight_gram: number;
   store_id: number;
   price: number;
+  addon_product?: string;
+  addons?: { name?: string; title?: string; price: number; icon?: string; image?: string }[];
 }
 
 export function buildOrderItemsPayload(
@@ -24,6 +26,12 @@ export function buildOrderItemsPayload(
 ): CheckoutOrderItemWithWeight[] {
   return orderItems.map((item) => {
     const ship = selectedShipping[item.store_id];
+    // Convert addons array to addon_product string if needed
+    const addonStr = item.addon_product
+      || (item.addons && item.addons.length > 0
+        ? item.addons.map((a) => a.name || a.title || "Add-on").join(", ")
+        : undefined);
+
     return {
       product_id: item.product_id,
       product_variant_id: item.product_variant_id,
@@ -31,6 +39,7 @@ export function buildOrderItemsPayload(
       weight_gram: item.weight_gram,
       store_id: item.store_id,
       price: item.price,
+      addon_product: addonStr,
       courier_name: ship?.courier_name || "-",
       courier_service: ship?.courier_service || "-",
       shipping_etd: ship?.shipping_etd || "-",

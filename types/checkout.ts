@@ -14,6 +14,7 @@ export interface CheckoutOrderItem {
   quantity: number;
   store_id: number;
   price: number;
+  addon_product?: string;
 }
 
 /** Single order item for checkout (includes weight, price, and inline shipping) */

@@ -260,6 +260,7 @@ function OrderTimeline({ step }: { step: number }) {
 function UnpaidQRCode({ orderNumber, createdAt }: { orderNumber: string; createdAt: string }) {
   const [qrData, setQrData] = useState<{ qr_url?: string; qr_string?: string; payment_status?: string; expired_at?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>("");
@@ -270,9 +271,11 @@ function UnpaidQRCode({ orderNumber, createdAt }: { orderNumber: string; created
         const res = await axios.get(`/api/payment/status/${orderNumber}`, { withCredentials: true });
         if (res.data?.status === "success") {
           setQrData(res.data.data);
+        } else {
+          setNotFound(true);
         }
       } catch {
-        // silent
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -307,6 +310,15 @@ function UnpaidQRCode({ orderNumber, createdAt }: { orderNumber: string; created
       <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-tertiary-container/20 text-[12px] font-medium text-on-tertiary-container">
         <span className="w-3.5 h-3.5 border-2 border-tertiary/30 border-t-tertiary rounded-full animate-spin" />
         Memuat pembayaran...
+      </span>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-surface-container-high text-[12px] font-medium text-on-surface-variant">
+        <span className="material-symbols-outlined text-[15px]">receipt_long</span>
+        Menunggu pembayaran
       </span>
     );
   }
