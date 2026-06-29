@@ -26,10 +26,10 @@ export function buildOrderItemsPayload(
 ): CheckoutOrderItemWithWeight[] {
   return orderItems.map((item) => {
     const ship = selectedShipping[item.store_id];
-    // Convert addons array to addon_product string if needed
+    // Convert addons array to JSON string (backend expects JSON array with price)
     const addonStr = item.addon_product
       || (item.addons && item.addons.length > 0
-        ? item.addons.map((a) => a.name || a.title || "Add-on").join(", ")
+        ? JSON.stringify(item.addons.map((a) => ({ name: a.name || a.title || "Add-on", price: a.price })))
         : undefined);
 
     return {
