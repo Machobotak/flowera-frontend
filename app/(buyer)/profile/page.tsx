@@ -257,11 +257,12 @@ function OrderTimeline({ step }: { step: number }) {
 
 /* ──────────────────────────── Unpaid QR Code ──────────────────────────── */
 
-function UnpaidQRCode({ orderNumber }: { orderNumber: string }) {
+function UnpaidQRCode({ orderNumber, createdAt }: { orderNumber: string; createdAt: string }) {
   const [qrData, setQrData] = useState<{ qr_url?: string; qr_string?: string; payment_status?: string; expired_at?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQR, setShowQR] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string>("");
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -278,6 +279,28 @@ function UnpaidQRCode({ orderNumber }: { orderNumber: string }) {
     };
     fetchStatus();
   }, [orderNumber]);
+
+  // Countdown timer — use expired_at from API, fallback to createdAt + 24h
+  const expireAt = qrData?.expired_at
+    ? new Date(qrData.expired_at)
+    : new Date(new Date(createdAt).getTime() + 24 * 3600000);
+
+  useEffect(() => {
+    const tick = () => {
+      const diff = expireAt.getTime() - Date.now();
+      if (diff <= 0) {
+        setTimeLeft("Waktu habis");
+        return;
+      }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimeLeft(`${h}j ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}d`);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [qrData?.expired_at, createdAt]);
 
   if (loading) {
     return (
@@ -297,6 +320,9 @@ function UnpaidQRCode({ orderNumber }: { orderNumber: string }) {
         >
           <span className="material-symbols-outlined text-[16px]">qr_code</span>
           Bayar Sekarang
+          {timeLeft && timeLeft !== "Waktu habis" && (
+            <span className="text-[11px] opacity-80">({timeLeft})</span>
+          )}
         </button>
       ) : (
         <div className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/20 space-y-4">
@@ -333,8 +359,13 @@ function UnpaidQRCode({ orderNumber }: { orderNumber: string }) {
 
           <div className="bg-surface-container rounded-xl p-3 text-[11px] text-on-surface-variant space-y-1">
             <p><span className="font-semibold">Order:</span> {orderNumber}</p>
-            {qrData?.expired_at && (
-              <p><span className="font-semibold">Batas bayar:</span> {formatDate(qrData.expired_at)}</p>
+            {timeLeft && (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Sisa waktu:</span>
+                <span className={`font-bold ${timeLeft === "Waktu habis" ? "text-error" : "text-tertiary"}`}>
+                  {timeLeft}
+                </span>
+              </div>
             )}
             <p className="text-[10px] mt-2">Scan QR code menggunakan aplikasi e-wallet atau mobile banking kamu.</p>
           </div>
@@ -590,7 +621,7 @@ function OrderCard({
       <div className="flex flex-wrap gap-3 border-t border-outline-variant/10 pt-6">
         {/* UNPAID — show QRIS for payment */}
         {order.status === "UNPAID" && (
-          <UnpaidQRCode orderNumber={order.orderNumber} />
+          <UnpaidQRCode orderNumber={order.orderNumber} createdAt={order.createdAt} />
         )}
 
         {/* PAID — waiting seller confirmation */}

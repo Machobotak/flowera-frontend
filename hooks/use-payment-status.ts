@@ -7,6 +7,7 @@ import type { CheckoutData } from "@/types/checkout";
 export function usePaymentStatus() {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [expiredAt, setExpiredAt] = useState<string | null>(null);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [qrLightbox, setQrLightbox] = useState(false);
 
@@ -29,6 +30,7 @@ export function usePaymentStatus() {
       if (res.status === "success") {
         setQrUrl((prev) => res.data.qr_url || prev);
         setPaymentStatus(res.data.payment_status);
+        setExpiredAt(res.data.expired_at || null);
       }
     } catch {
       // ignore
@@ -40,6 +42,7 @@ export function usePaymentStatus() {
   return {
     qrUrl,
     paymentStatus,
+    expiredAt,
     isCheckingPayment,
     qrLightbox,
     setQrLightbox,

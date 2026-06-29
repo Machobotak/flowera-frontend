@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import OrderItemRow from "./order-item-row";
 import { formatRupiah } from "@/utils/format";
 import type { ShippingOption } from "@/types/checkout";
@@ -46,9 +45,6 @@ export default function OrderSummarySidebar({
             <h3 className="font-body text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider">
               Pesananmu
             </h3>
-            <Link href="/cart" className="text-[12px] text-primary font-semibold hover:underline">
-              Edit
-            </Link>
           </div>
           <div className="divide-y divide-outline-variant/20">
             {orderItems.map((item, i) => (
