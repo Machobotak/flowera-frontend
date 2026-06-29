@@ -61,7 +61,7 @@ export default function ProductFormPage() {
   useEffect(() => {
     const fetchSubCategories = async () => {
       try {
-        const res = await axios.get("/api/seller/sub-product-categories", { withCredentials: true });
+        const res = await axios.get("/api/seller/product-categories/sub", { withCredentials: true });
         const data = res.data?.data ?? res.data ?? [];
         if (Array.isArray(data)) {
           setSubCategories(data.map((c: any) => ({ id: c.id, name: c.name || c.title || "" })));

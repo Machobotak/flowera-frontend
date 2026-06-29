@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import OrderItemRow from "./order-item-row";
 import { formatRupiah } from "@/utils/format";
 import type { ShippingOption } from "@/types/checkout";
@@ -23,6 +22,7 @@ interface OrderSummarySidebarProps {
   subtotal: number;
   itemCount: number;
   shippingTotal: number;
+  serviceFee: number;
   total: number;
   selectedShipping: Record<number, ShippingOption>;
 }
@@ -32,6 +32,7 @@ export default function OrderSummarySidebar({
   subtotal,
   itemCount,
   shippingTotal,
+  serviceFee,
   total,
   selectedShipping,
 }: OrderSummarySidebarProps) {
@@ -44,9 +45,6 @@ export default function OrderSummarySidebar({
             <h3 className="font-body text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider">
               Pesananmu
             </h3>
-            <Link href="/cart" className="text-[12px] text-primary font-semibold hover:underline">
-              Edit
-            </Link>
           </div>
           <div className="divide-y divide-outline-variant/20">
             {orderItems.map((item, i) => (
@@ -81,6 +79,10 @@ export default function OrderSummarySidebar({
                 ))}
               </>
             )}
+            <div className="flex justify-between text-[13px]">
+              <span className="text-on-surface-variant">Biaya Layanan</span>
+              <span className="font-medium text-on-surface">{formatRupiah(serviceFee)}</span>
+            </div>
             <hr className="border-outline-variant/30" />
             <div className="flex justify-between items-center pt-1">
               <span className="font-bold text-on-surface text-[15px]">Total Pembayaran</span>

@@ -83,9 +83,6 @@ export default function BuyerNavbar() {
                 <span className="material-symbols-outlined text-on-surface-variant">
                   shopping_cart
                 </span>
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  2
-                </span>
               </a>
               <button className="hover:opacity-80 transition-opacity">
                 <span className="material-symbols-outlined text-on-surface-variant">
