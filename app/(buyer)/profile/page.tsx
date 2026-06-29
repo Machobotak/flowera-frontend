@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import axios from "axios";
 import { useAuth } from "@/contexts/auth-context";
 import { getBuyerOrders, confirmOrderImage } from "@/utils/user-order-api";
 import { getBuyerStatusLabel, getBuyerFilterKey, deriveServiceFee } from "@/utils/order-utils";
+import { getProductImageUrl } from "@/utils/image-url";
+import QrLightbox from "@/components/buyer-checkout/qr-lightbox";
 import type { UserOrder } from "@/types/order";
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -32,24 +35,6 @@ const ORDER_FILTERS: { id: OrderFilter; label: string }[] = [
   { id: "shipped", label: "Dikirim" },
   { id: "completed", label: "Selesai" },
   { id: "cancelled", label: "Dibatalkan" },
-];
-
-const CUSTOM_DESIGNS = [
-  {
-    name: "Cerulean Dream",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuA3XYNUhZ4WnpvFOutAY4dlc2WBbt6KzIy2isyupHSLQH2y6yEww7IoyUP4eGq4g7WSf3yQRhTsZ6HuiFVZI83N-ASSV3Plb8C37IErueMu5a5Po0vuc2Swim2o26W6qTvRNtUal-0FzTw1IgfSSrSMd-kTTEbNWivov5lAQUeP0-LTENVlG60rDYotQWghJ87eyPp766N6MzasyDgI3QIW08gctR7s2YLHAWAs1n0GfLXEq4IFDz22FOuRJAzn2iu8f4wEwyGe_GI",
-  },
-  {
-    name: "Golden Harvest",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAswWl7d19Or8YzhC_zzOZpWA5vmfmXWIQJgdU_BzljyKzTf8N8p2dzHOBE2JQQLWzQY19KQUx4oB84fti3_W4SXKSiWcpY_hfif1xyTdM8U8mB9wyhuifXeA4nyYyYLO1D3K6P-Z6DHLpl3fjLPfSDspZhdC7pzq85Mqsa3d0l7Fu_LbzJsDobBYJD8PNQ-N0K5FCKzmceo2VHO-YXIf9sCnuEZBvxx8bPEe-FS0b84ITXcPQyMEnjPtzSFrio2YnyOmPOk-1ZYO8",
-  },
-  {
-    name: "Solitary Grace",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBThUBvcGn7Mk_2JGMtfCCzsEs3K0jg7K0LxDkqkPWaLCJvYTFpFkQ1pqt02A9GuCukQC9G35sZ5WN3pxAe8LKz6T80J1yyHeG9GIFTri1u3Z2DhYQjMrngJ4OMO2FCFMTs8unBimO7ZxKjvCI4SxXvqn-KNqRLiXKdM-Ek-hrh23qJAZ0FqxVjvbrMlQuRUecPgf14OL2jhZge4ZEey3zVTFt-9-JvhksTXt80ijjpOMyfq9dIaSIsTEhbgi6pH2AfDFamkODkeis",
-  },
 ];
 
 const TIMELINE_STEPS = ["Diterima", "Diproses", "Dikirim", "Terkirim"];
@@ -270,6 +255,95 @@ function OrderTimeline({ step }: { step: number }) {
   );
 }
 
+/* ──────────────────────────── Unpaid QR Code ──────────────────────────── */
+
+function UnpaidQRCode({ orderNumber }: { orderNumber: string }) {
+  const [qrData, setQrData] = useState<{ qr_url?: string; qr_string?: string; payment_status?: string; expired_at?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showQR, setShowQR] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await axios.get(`/api/payment/status/${orderNumber}`, { withCredentials: true });
+        if (res.data?.status === "success") {
+          setQrData(res.data.data);
+        }
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStatus();
+  }, [orderNumber]);
+
+  if (loading) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-tertiary-container/20 text-[12px] font-medium text-on-tertiary-container">
+        <span className="w-3.5 h-3.5 border-2 border-tertiary/30 border-t-tertiary rounded-full animate-spin" />
+        Memuat pembayaran...
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {!showQR ? (
+        <button
+          onClick={() => setShowQR(true)}
+          className="self-start inline-flex items-center gap-2 px-5 py-2.5 bg-tertiary text-on-tertiary rounded-full text-[13px] font-semibold hover:shadow-float transition-all active:scale-95"
+        >
+          <span className="material-symbols-outlined text-[16px]">qr_code</span>
+          Bayar Sekarang
+        </button>
+      ) : (
+        <div className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/20 space-y-4">
+          <div className="flex items-center justify-between">
+            <h5 className="text-[14px] font-semibold text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-tertiary text-[20px]">qr_code</span>
+              Pembayaran QRIS
+            </h5>
+            <button onClick={() => setShowQR(false)} className="text-on-surface-variant hover:text-on-surface">
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+
+          {/* QR Image — clickable to enlarge */}
+          {qrData?.qr_url ? (
+            <>
+              <button onClick={() => setLightboxOpen(true)} className="flex justify-center cursor-pointer group">
+                <div className="relative">
+                  <img src={qrData.qr_url} alt="QRIS" className="w-48 h-48 rounded-xl border border-outline-variant/20 bg-white p-2 group-hover:shadow-float transition-all" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 rounded-xl transition-all">
+                    <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 text-[32px] drop-shadow-lg">zoom_in</span>
+                  </div>
+                </div>
+              </button>
+              <QrLightbox qrUrl={qrData.qr_url} isOpen={lightboxOpen} onClose={() => setLightboxOpen(false)} />
+            </>
+          ) : qrData?.qr_string ? (
+            <div className="flex justify-center">
+              <pre className="text-[10px] text-on-surface-variant bg-white p-4 rounded-xl border border-outline-variant/20 whitespace-pre-wrap max-w-full break-all">{qrData.qr_string}</pre>
+            </div>
+          ) : (
+            <p className="text-[12px] text-on-surface-variant text-center">QR code tidak tersedia. Silakan coba lagi nanti.</p>
+          )}
+
+          <div className="bg-surface-container rounded-xl p-3 text-[11px] text-on-surface-variant space-y-1">
+            <p><span className="font-semibold">Order:</span> {orderNumber}</p>
+            {qrData?.expired_at && (
+              <p><span className="font-semibold">Batas bayar:</span> {formatDate(qrData.expired_at)}</p>
+            )}
+            <p className="text-[10px] mt-2">Scan QR code menggunakan aplikasi e-wallet atau mobile banking kamu.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ──────────────────────────── OrderCard ──────────────────────────── */
 
 function OrderCard({
@@ -303,10 +377,12 @@ function OrderCard({
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between pb-5 border-b border-outline-variant/20 mb-7 gap-5">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center overflow-hidden">
-            <span className="material-symbols-outlined text-secondary text-[24px]" style={FILL_STYLE}>
-              shopping_bag
-            </span>
+          <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden border border-outline-variant/10">
+            <img
+              src={getProductImageUrl(firstItem?.product_id)}
+              alt={firstItem?.product_id?.name || "Produk"}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <h3 className="text-[14px] font-semibold text-on-surface mb-0.5">
@@ -331,19 +407,32 @@ function OrderCard({
         <div className="flex-grow space-y-3">
           {items.map((item) => (
             <div key={item.id} className="flex gap-3 items-center">
-              <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden">
-                <span className="material-symbols-outlined text-on-surface-variant text-[20px]">local_florist</span>
+              <div className="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden border border-outline-variant/10">
+                <img
+                  src={getProductImageUrl(item.product_id)}
+                  alt={item.product_id?.name || "Produk"}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-on-surface truncate">
                   {item.product_id?.name || "Produk"}
                 </p>
-                <p className="text-[11px] text-on-surface-variant truncate">
-                  {item.product_variant_id
-                    ? `${item.product_variant_id.title} — ${item.product_variant_id.subTitle}`
-                    : ""}
-                  {item.store_id?.name ? ` • ${item.store_id.name}` : ""}
-                </p>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {item.product_variant_id && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary-container/20 text-[10px] font-medium text-on-primary-container">
+                      {item.product_variant_id.title} — {item.product_variant_id.subTitle}
+                    </span>
+                  )}
+                  {item.addon_product != null && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-secondary-container/30 text-[10px] font-medium text-on-secondary-container">
+                      + Addon
+                    </span>
+                  )}
+                </div>
+                {item.store_id?.name && (
+                  <p className="text-[11px] text-on-surface-variant mt-0.5">{item.store_id.name}</p>
+                )}
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-[12px] font-semibold text-on-surface">
@@ -499,12 +588,9 @@ function OrderCard({
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 border-t border-outline-variant/10 pt-6">
-        {/* UNPAID — no action needed (payment handled elsewhere) */}
+        {/* UNPAID — show QRIS for payment */}
         {order.status === "UNPAID" && (
-          <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-tertiary-container/20 text-[12px] font-medium text-on-tertiary-container">
-            <span className="material-symbols-outlined text-[15px]">schedule</span>
-            Menunggu pembayaran
-          </span>
+          <UnpaidQRCode orderNumber={order.orderNumber} />
         )}
 
         {/* PAID — waiting seller confirmation */}
@@ -749,46 +835,6 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Custom Bouquet History */}
-          <div className="mt-14">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="font-headline text-[24px] font-semibold text-on-surface">
-                Custom Bouquet History
-              </h2>
-              <button className="text-primary font-semibold text-[13px] hover:underline">
-                View All
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {CUSTOM_DESIGNS.map((design) => (
-                <div key={design.name} className="group">
-                  <div className="aspect-square bg-white rounded-2xl overflow-hidden mb-3 relative shadow-soft">
-                    <img
-                      alt={design.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      src={design.image}
-                    />
-                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button className="bg-white p-2 rounded-full text-primary hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-[18px]">refresh</span>
-                      </button>
-                      <button className="bg-white p-2 rounded-full text-primary hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-[18px]" style={FILL_STYLE}>content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <h3 className="text-[13px] font-semibold text-center text-on-surface">{design.name}</h3>
-                </div>
-              ))}
-              <div className="group">
-                <div className="aspect-square bg-white border-2 border-dashed border-outline-variant/50 rounded-2xl mb-3 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary hover:text-primary transition-all cursor-pointer">
-                  <span className="material-symbols-outlined text-[36px]">add_circle</span>
-                  <span className="text-[13px] font-semibold">New Design</span>
-                </div>
-                <h3 className="text-[13px] font-semibold text-center text-transparent select-none">Hidden</h3>
-              </div>
-            </div>
-          </div>
         </section>
       </div>
     </main>
