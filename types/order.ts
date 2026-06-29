@@ -36,6 +36,7 @@ export interface OrderProduct {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  product_image?: { id: number; image_url: string; isDefault?: boolean }[];
 }
 
 export interface OrderProductVariant {
