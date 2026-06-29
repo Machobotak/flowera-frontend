@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
+import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
 import { StarRating, LoadingState, ErrorState, NotFoundState } from "@/components/ui";
@@ -99,6 +100,7 @@ export default function ProductDetailPage() {
   const productId = params.id as string;
 
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
   const [product, setProduct] = useState<ProductData | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -175,7 +177,7 @@ export default function ProductDetailPage() {
   const totalPrice = variantPrice + addonsTotal;
 
   return (
-    <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
+    <main className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop space-y-stack-lg py-stack-md pb-20 md:pb-16">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* ── Breadcrumb ── */}
@@ -391,6 +393,10 @@ export default function ProductDetailPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => {
+                    if (!user && !authLoading) {
+                      router.push("/login");
+                      return;
+                    }
                     if (!product) return;
 
                     // Get the first product image

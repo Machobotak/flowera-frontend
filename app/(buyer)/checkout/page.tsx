@@ -261,7 +261,7 @@ export default function CheckoutPage() {
   }, {});
 
   return (
-    <main className="pt-6 pb-16 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+    <main className="pt-6 pb-20 md:pb-16 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
       {/* Breadcrumb */}
       <nav className="flex gap-2 text-[12px] leading-4 tracking-[0.03em] font-medium text-on-surface-variant mb-2">
         <Link className="hover:text-primary transition-colors" href="/">Home</Link>

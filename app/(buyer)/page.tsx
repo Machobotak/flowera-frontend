@@ -45,7 +45,7 @@ function HeroCarousel() {
   }, []);
 
   return (
-    <section className="relative w-full aspect-[21/9] rounded-xl overflow-hidden shadow-float group">
+    <section className="relative w-full aspect-[4/3] md:aspect-[21/9] rounded-xl overflow-hidden shadow-float group">
       <div 
         className="absolute inset-0 flex transition-transform duration-1000 ease-in-out"
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
@@ -57,16 +57,16 @@ function HeroCarousel() {
               alt={`${slide.title} ${slide.subtitle}`}
               src={slide.image}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-on-surface/60 to-transparent flex items-center px-16">
+            <div className="absolute inset-0 bg-gradient-to-r from-on-surface/60 to-transparent flex items-center px-6 md:px-16">
               <div className="max-w-md text-white">
-                <h2 className="font-display-lg text-display-lg mb-4 leading-tight">
+                <h2 className="text-[20px] md:text-[36px] font-headline font-bold mb-2 md:mb-4 leading-tight">
                   {slide.title} <br />
                   <span className="text-primary-fixed">{slide.subtitle}</span>
                 </h2>
-                <p className="font-body-lg text-body-lg mb-8 opacity-90 drop-shadow-md">
+                <p className="text-[12px] md:text-[16px] mb-4 md:mb-8 opacity-90 drop-shadow-md">
                   {slide.desc}
                 </p>
-                <button className="px-8 py-4 bg-primary-container text-on-primary-container font-label-md rounded-full shadow-lg hover:scale-105 transition-transform">
+                <button className="px-5 py-2.5 md:px-8 md:py-4 bg-primary-container text-on-primary-container text-[12px] md:text-[14px] font-semibold rounded-full shadow-lg hover:scale-105 transition-transform">
                   Shop The Collection
                 </button>
               </div>
@@ -322,7 +322,7 @@ function ExploreSection() {
 
 export default function Home() {
   return (
-    <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
+    <main className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop space-y-stack-lg py-stack-md pb-20 md:pb-16">
       <HeroCarousel />
       <ExploreSection />
     </main>

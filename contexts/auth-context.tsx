@@ -88,25 +88,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const validateSession = async () => {
       try {
         const token = localStorage.getItem("accessToken");
+        const fromGoogle = sessionStorage.getItem("googleLogin") === "1";
 
-        // Try with token from localStorage first, fallback to cookie-based auth
+        if (!token && !fromGoogle) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Clear google flag
+        if (fromGoogle) sessionStorage.removeItem("googleLogin");
+
         const res = await axios.get(`${API_URL}/api/auth/me`, {
           ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
         });
 
         if (res.data) {
           const validatedUser = buildUser(res.data);
-
-          // Set default header for future requests if we have a token
           if (token) {
             axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
           }
 
-          localStorage.setItem(
-            "user",
-            JSON.stringify(validatedUser)
-          );
-
+          localStorage.setItem("user", JSON.stringify(validatedUser));
           setUser(validatedUser);
         } else {
           localStorage.removeItem("user");
@@ -131,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleGoogleLogin = () => {
+    sessionStorage.setItem("googleLogin", "1");
     window.location.href =
       `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`;
   };

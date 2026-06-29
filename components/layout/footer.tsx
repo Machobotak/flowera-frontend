@@ -24,8 +24,8 @@ export default function Footer() {
   const sellHref = isSeller ? "/store" : "/store/create";
 
   return (
-    <footer className="bg-surface-container-low dark:bg-surface-container-high w-full pt-stack-lg pb-stack-md mt-stack-lg border-t border-outline-variant/30">
-      <div className="flex flex-col items-center justify-center px-margin-desktop w-full max-w-container-max mx-auto">
+    <footer className="hidden md:block bg-surface-container-low dark:bg-surface-container-high w-full pt-stack-lg pb-stack-md mt-stack-lg border-t border-outline-variant/30">
+      <div className="flex flex-col items-center justify-center px-margin-mobile md:px-margin-desktop w-full max-w-container-max mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 w-full mb-12">
           {/* Brand */}
           <div className="col-span-1 space-y-4">

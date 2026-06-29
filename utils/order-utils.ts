@@ -172,7 +172,7 @@ export function getBuyerStatusLabel(status: string): string {
     PROSES_PENGERJAAN: "Sedang Dikerjakan",
     CONFIRM_USER: "Menunggu Konfirmasi",
     DELIVERY: "Dalam Pengiriman",
-    DITERIMA: "Selesai",
+    DITERIMA: "Diterima Pelanggan",
     PROCESSED: "Diproses",
     SHIPPED: "Dikirim",
     DELIVERED: "Selesai",

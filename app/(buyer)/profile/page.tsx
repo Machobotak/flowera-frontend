@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useAuth } from "@/contexts/auth-context";
 import { getBuyerOrders, confirmOrderImage, confirmReceived } from "@/utils/user-order-api";
@@ -119,7 +120,7 @@ function ProfileSidebar() {
     "https://lh3.googleusercontent.com/aida-public/AB6AXuBnNFXBawqirwRLnyecSeAd6E2mzFVJEOOXq-W98lx1c_Z7ieclUEvOAvqYH_svhA6fvyPWicVWnYrlsGo6YZRU8J5pR2ZGzyRhLZvJ7rjqHm1xgxZk85d1AOVTLZAnAlOp0m6hD1NalFRswYil1qcxkUpbXKkaq1NYvrE2JNlKiQd1fZVh5s8isV340Js_BP-7444W03IttiJTczSGODFZigsJOesIRPRWBrjbwNwLI36apTgWfECrhT1CJWU55BNsVgYdJuCfn1Q";
 
   return (
-    <aside className="w-full md:w-80 flex-shrink-0">
+    <aside className="hidden md:block md:w-80 flex-shrink-0">
       <div className="bg-white rounded-2xl p-8 shadow-soft flex flex-col items-center sticky top-24">
         <div className="relative mb-5 group">
           <img
@@ -415,12 +416,12 @@ function OrderCard({
 
   return (
     <div
-      className={`bg-white rounded-2xl p-7 shadow-soft border border-outline-variant/10 transition-all duration-300 ${
+      className={`bg-white rounded-2xl p-5 md:p-7 shadow-soft border border-outline-variant/10 transition-all duration-300 overflow-hidden ${
         isFinished ? "opacity-80 hover:opacity-100" : "hover:shadow-float hover:-translate-y-1"
       }`}
     >
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between pb-5 border-b border-outline-variant/20 mb-7 gap-5">
+      <div className="flex flex-row flex-wrap justify-between pb-5 border-b border-outline-variant/20 mb-5 md:mb-7 gap-3 md:gap-5">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden border border-outline-variant/10">
             <img
@@ -439,11 +440,11 @@ function OrderCard({
             <p className="text-[11px] text-on-surface-variant">{formatDate(order.createdAt)}</p>
           </div>
         </div>
-        <div className="flex flex-col items-start lg:items-end">
-          <span className={`${getStatusColor(order.status)} px-3 py-1 rounded-full text-[11px] font-bold mb-1`}>
+        <div className="flex flex-col items-start lg:items-end shrink-0">
+          <span className={`${getStatusColor(order.status)} px-2.5 py-1 rounded-full text-[10px] md:text-[11px] font-bold mb-1 whitespace-nowrap max-w-full`}>
             {getBuyerStatusLabel(order.status)}
           </span>
-          <span className="text-[11px] text-on-surface-variant">#{order.orderNumber}</span>
+          <span className="text-[10px] md:text-[11px] text-on-surface-variant">#{order.orderNumber}</span>
         </div>
       </div>
 
@@ -703,6 +704,15 @@ function OrderCard({
 /* ──────────────────────────── Page ──────────────────────────── */
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
+
   const [activeFilter, setActiveFilter] = useState<OrderFilter>("all");
   const [search, setSearch] = useState("");
   const [orders, setOrders] = useState<UserOrder[]>([]);
@@ -729,8 +739,16 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (user) fetchOrders();
+  }, [user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   /* ── Confirm / Reject Seller Image ── */
 
@@ -810,16 +828,38 @@ export default function ProfilePage() {
   });
 
   return (
-    <main className="pt-8 pb-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto min-h-screen">
+    <main className="pt-8 pb-20 md:pb-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto min-h-screen">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar */}
         <ProfileSidebar />
 
         {/* Content */}
         <section className="flex-grow min-w-0">
+          {/* Mobile account bar */}
+          <div className="md:hidden flex items-center justify-between bg-white rounded-2xl p-4 shadow-soft border border-outline-variant/20 mb-6">
+            <div className="flex items-center gap-3">
+              <img
+                src={user?.avatar || "https://ui-avatars.com/api/?name=User&background=8c4a5c&color=fff"}
+                alt="Avatar"
+                className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
+              />
+              <div>
+                <p className="text-[14px] font-semibold text-on-surface">{user?.name || "Pengguna"}</p>
+                <p className="text-[11px] text-on-surface-variant">{user?.email || ""}</p>
+              </div>
+            </div>
+            <Link
+              href="/profile/account"
+              className="px-4 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:shadow-soft transition-all active:scale-95 flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">settings</span>
+              Akun
+            </Link>
+          </div>
+
           {/* Header */}
           <div className="mb-10">
-            <h1 className="font-headline text-[36px] leading-[44px] font-semibold text-on-surface mb-6">
+            <h1 className="font-headline text-[28px] md:text-[36px] leading-[44px] font-semibold text-on-surface mb-6">
               Pesanan Saya
             </h1>
 
