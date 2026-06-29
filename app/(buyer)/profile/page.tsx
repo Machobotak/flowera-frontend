@@ -284,11 +284,23 @@ function OrderCard({
   onUploadProof: (id: number) => void;
   actionLoading: boolean;
 }) {
+
   const isFinished = order.status === "completed" || order.status === "cancelled";
-  const firstItem = order.items[0];
-  const productName = firstItem?.product?.name || "Produk";
-  const totalQty = order.items.reduce((s: number, i: any) => s + i.quantity, 0);
+  // const firstItem = order.items?.[0];
+  // const productName = firstItem?.product?.name || "Produk";
+  // const totalQty = order.items.reduce((s: number, i: any) => s + i.quantity, 0);
   const timelineStep = getTimelineStep(order.status);
+
+const items = order.order_item ?? [];
+
+const firstItem = items[0];
+
+const productName = firstItem?.product_id?.name ?? "Produk";
+
+const totalQty = items.reduce(
+  (sum: number, item: any) => sum + item.quantity,
+  0
+);
 
   return (
     <div className={`bg-white rounded-2xl p-7 shadow-soft border border-outline-variant/10 transition-all duration-300 ${
@@ -303,8 +315,8 @@ function OrderCard({
           <div>
             <h3 className="text-[14px] font-semibold text-on-surface mb-0.5">
               {productName}
-              {order.items.length > 1 && (
-                <span className="text-on-surface-variant font-normal"> +{order.items.length - 1} lainnya</span>
+              {order.order_item.length > 1 && (
+                <span className="text-on-surface-variant font-normal"> +{order.order_item.length - 1} lainnya</span>
               )}
             </h3>
             <p className="text-[11px] text-on-surface-variant">{formatDate(order.createdAt)}</p>
@@ -321,7 +333,7 @@ function OrderCard({
       {/* Body - Items */}
       <div className="flex flex-col md:flex-row gap-7 mb-8">
         <div className="flex-grow space-y-3">
-          {order.items.map((item: any) => (
+          {order.order_item.map((item: any) => (
             <div key={item.id} className="flex gap-3 items-center">
               <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {item.product ? (
@@ -577,7 +589,7 @@ export default function ProfilePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get("/api/user/orders", { withCredentials: true });
+      const res = await axios.get("/api/user/order", { withCredentials: true });
       if (res.data?.status === "success") {
         setOrders(res.data.data ?? []);
       }
