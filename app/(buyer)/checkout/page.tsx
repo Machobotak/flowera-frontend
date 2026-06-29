@@ -156,7 +156,8 @@ export default function CheckoutPage() {
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.qty, 0);
   const itemCount = orderItems.reduce((sum, item) => sum + item.qty, 0);
   const shippingTotal = Object.values(selectedShipping).reduce((sum, s) => sum + s.shipping_cost, 0);
-  const total = subtotal + shippingTotal;
+  const serviceFee = 1000;
+  const total = subtotal + shippingTotal + serviceFee;
 
   const uniqueStoreIds = useMemo(
     () => [...new Set(orderItems.map((item) => item.store_id))],
@@ -973,6 +974,7 @@ export default function CheckoutPage() {
           subtotal={subtotal}
           itemCount={itemCount}
           shippingTotal={shippingTotal}
+          serviceFee={serviceFee}
           total={total}
           selectedShipping={selectedShipping}
         />

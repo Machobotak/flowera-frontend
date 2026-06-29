@@ -22,10 +22,12 @@ export default function AdminDashboardLayout({
   }, [user, isLoading, router]);
 
   // Determine current menu for top nav
-  // NOTE: check /sub-categories BEFORE /categories to avoid false match
+  // NOTE: check longer paths BEFORE shorter ones to avoid false match
   let currentMenu = "Dashboard";
   if (pathname.includes("/sub-categories")) currentMenu = "Sub Kategori";
   else if (pathname.includes("/categories")) currentMenu = "Kategori Produk";
+  else if (pathname.includes("/users")) currentMenu = "Users";
+  else if (pathname.includes("/sellers")) currentMenu = "Sellers";
   if (pathname.includes("/products")) currentMenu = "Produk";
 
   if (isLoading) {
@@ -112,6 +114,48 @@ export default function AdminDashboardLayout({
               label
             </span>
             <span className="text-[14px]">Sub Kategori</span>
+          </Link>
+
+          <Link
+            href="/admin/users"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              currentMenu === "Users"
+                ? "bg-primary-container text-primary font-bold shadow-sm"
+                : "text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={
+                currentMenu === "Users"
+                  ? { fontVariationSettings: "'FILL' 1" }
+                  : {}
+              }
+            >
+              people
+            </span>
+            <span className="text-[14px]">Users</span>
+          </Link>
+
+          <Link
+            href="/admin/sellers"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              currentMenu === "Sellers"
+                ? "bg-primary-container text-primary font-bold shadow-sm"
+                : "text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={
+                currentMenu === "Sellers"
+                  ? { fontVariationSettings: "'FILL' 1" }
+                  : {}
+              }
+            >
+              storefront
+            </span>
+            <span className="text-[14px]">Sellers</span>
           </Link>
 
           <Link
