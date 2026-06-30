@@ -6,8 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
 import DeleteConfirmModal from "@/components/seller-product/delete-confirm-modal";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
 function authConfig() {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -84,7 +82,7 @@ export default function AddressTab() {
   // ─── Fetch addresses ─────────────────────────────────────
   const fetchAddresses = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/user/address`, authConfig());
+      const res = await axios.get(`/api/user/address`, authConfig());
       const data: any[] = res.data?.data ?? res.data ?? [];
       const mapped: Address[] = data.map((a: any) => ({
         id: String(a.id),
@@ -268,10 +266,10 @@ export default function AddressTab() {
 
     try {
       if (editingId) {
-        await axios.patch(`${API_BASE}/api/user/address/${editingId}`, payload, authConfig());
+        await axios.patch(`/api/user/address/${editingId}`, payload, authConfig());
         addToast("Alamat berhasil diperbarui", "success");
       } else {
-        await axios.post(`${API_BASE}/api/user/address`, payload, authConfig());
+        await axios.post(`/api/user/address`, payload, authConfig());
         addToast("Alamat berhasil ditambahkan", "success");
       }
       setShowForm(false);
@@ -288,7 +286,7 @@ export default function AddressTab() {
   const handleDelete = async (id: string) => {
     setSaving(true);
     try {
-      await axios.delete(`${API_BASE}/api/user/address/${id}`, authConfig());
+      await axios.delete(`/api/user/address/${id}`, authConfig());
       setAddresses((prev) => prev.filter((a) => a.id !== id));
       addToast("Alamat berhasil dihapus", "success");
     } catch (err: any) {

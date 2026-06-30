@@ -124,6 +124,10 @@ function ExploreSection() {
     fetchHomeData();
   }, []);
 
+  // Ref to always point to latest products (for enrichment without re-fetch)
+  const productsRef = React.useRef(products);
+  productsRef.current = products;
+
   // Fetch produk berdasarkan kategori yang dipilih
   useEffect(() => {
     if (selectedCategory === null) {
@@ -139,7 +143,22 @@ function ExploreSection() {
           withCredentials: true,
         });
         const data: any[] = res.data?.data ?? res.data ?? [];
-        if (!cancelled) setCategoryProducts(data);
+
+        if (!cancelled) {
+          // Enrich category products with store data from the full home products list
+          // (category API doesn't include store relation, but home API does)
+          const latestProducts = productsRef.current;
+          const enriched = data.map((catProduct: any) => {
+            const fullProduct = latestProducts.find((p: any) => p.id === catProduct.id);
+            return {
+              ...catProduct,
+              store: catProduct.store || fullProduct?.store || null,
+              image: catProduct.image || fullProduct?.image || null,
+              product_image: catProduct.product_image || fullProduct?.product_image || null,
+            };
+          });
+          setCategoryProducts(enriched);
+        }
       } catch (error) {
         if (!cancelled) { addToast("Gagal memuat produk kategori.", "error"); setCategoryProducts([]); }
       } finally {
@@ -263,9 +282,8 @@ function ExploreSection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 xl:gap-5">
               {displayProducts
                 .filter((p: any) => {
-                  const hasStore = p.store?.name && p.store.name !== "Unknown";
                   const hasName = p.name && p.name !== "Unknown";
-                  return hasStore && hasName;
+                  return hasName;
                 })
                 .map((product) => (
                 <ProductCard

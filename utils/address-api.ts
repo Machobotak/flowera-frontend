@@ -19,9 +19,7 @@ import type {
   UpdateAddressPayload,
 } from "@/types/address";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const BASE = `${API_BASE}/api/user/address`;
+const BASE = "/api/user/address";
 
 /** Build axios config with Bearer token from localStorage */
 function authConfig() {
