@@ -398,13 +398,12 @@ function LogoPhilosophySection() {
 
       {/* Logo Display */}
       <div className="flex flex-col items-center gap-6">
-        <div className="flex items-center justify-center w-40 h-40 rounded-full bg-gradient-to-br from-primary-container/60 to-secondary-container/40 shadow-float">
-          <img
-            src="/logo-v1-transparant.png"
-            alt="Flowera Logo"
-            className="h-20 w-auto"
-          />
-        </div>
+        <img
+          src="/favicon.ico"
+          alt="Flowera Logo"
+          className="w-40 h-40 object-contain"
+        />
+
         <p className="text-on-surface-variant text-[13px] tracking-widest uppercase font-semibold opacity-60">
           Flowera — Temani Setiap Momen Bermakna
         </p>
