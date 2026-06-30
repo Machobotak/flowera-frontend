@@ -715,20 +715,20 @@ function HowItWorksSection() {
 ────────────────────────────────────────────────────────── */
 
 const TEAM_MEMBERS = [
-  { role: "Ahmad Fahmy Ghifariel Akbar", placeholder: "202410370110022", icon: "/assets/202410370110022.jpg" },
+  { role: "Muhammad Ibrahim Al Ayubi", placeholder: "CEO", icon: "/assets/202410370110123.jpg" },
   {
-    role: "Muhammad Ibrahim Al Ayubi",
-    placeholder: "202410370110123",
-    icon: "/assets/202410370110123.jpg",
+    role: "Ahmad Fahmy Ghifariel Akbar",
+    placeholder: "CTO & COO",
+    icon: "/assets/202410370110022.jpg",
   },
   {
     role: "Fiqri Ridho Firmansyah",
-    placeholder: "202410370110167",
+    placeholder: "CMO",
     icon: "/assets/202410370110167.jpg",
   },
   {
     role: "Ayshea Marvella Pasha",
-    placeholder: "202410370110379",
+    placeholder: "CFO",
     icon: "/assets/202410370110379.jpg",
   },
 ];

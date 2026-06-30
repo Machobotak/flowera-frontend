@@ -96,7 +96,7 @@ export default function CorporateHeader() {
       // Active-section spy
       // We walk ALL_SECTION_IDS in order; a section "wins" if its top
       // edge has passed the header bottom (with a small grace area).
-      let current = ALL_SECTION_IDS[0];
+      let current: (typeof ALL_SECTION_IDS)[number] = ALL_SECTION_IDS[0];
       for (const id of ALL_SECTION_IDS) {
         const el = document.getElementById(id);
         if (!el) continue;
