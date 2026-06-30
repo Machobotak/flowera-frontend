@@ -24,6 +24,7 @@ export interface ProductCategory {
 export interface SubProductCategory {
   id: number;
   title: string;
+  product_categories?: ProductCategory | null;
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
@@ -77,8 +78,10 @@ export interface UpdateCategoryPayload {
 
 export interface CreateSubCategoryPayload {
   title: string;
+  sub_product_categories_id: number;
 }
 
 export interface UpdateSubCategoryPayload {
-  title: string;
+  title?: string;
+  sub_product_categories_id?: number;
 }

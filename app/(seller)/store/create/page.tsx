@@ -24,6 +24,9 @@ export default function CreateStorePage() {
     cityName: "",
     districtId: "",
     districtName: "",
+    subdistrictId: "",
+    subdistrictName: "",
+    zipCode: "",
     addressDetail: "",
     description: "",
   });
@@ -34,11 +37,13 @@ export default function CreateStorePage() {
   const [provinces, setProvinces] = useState<Region[]>([]);
   const [cities, setCities] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<Region[]>([]);
-  
+  const [subdistricts, setSubdistricts] = useState<Region[]>([]);
+
   const [isLoadingRegions, setIsLoadingRegions] = useState({
     provinces: false,
     cities: false,
     districts: false,
+    subdistricts: false,
   });
 
   // 1. Fetch Provinces
@@ -94,7 +99,7 @@ export default function CreateStorePage() {
       const fetchDistricts = async () => {
         setIsLoadingRegions(prev => ({ ...prev, districts: true }));
         try {
-          const API_DISTRICT = `/regional-api/districts/${formData.cityId}`; 
+          const API_DISTRICT = `/regional-api/districts/${formData.cityId}`;
           if (!API_DISTRICT) return;
 
           const response = await fetch(API_DISTRICT);
@@ -112,36 +117,66 @@ export default function CreateStorePage() {
     }
   }, [formData.cityId]);
 
+  // 4. Fetch Subdistricts (Kelurahan) saat District berubah
+  useEffect(() => {
+    if (formData.districtId) {
+      const fetchSubdistricts = async () => {
+        setIsLoadingRegions(prev => ({ ...prev, subdistricts: true }));
+        try {
+          const response = await fetch(`/regional-api/villages/${formData.districtId}`);
+          const res = await response.json();
+          setSubdistricts(res.data || []);
+        } catch (error) {
+          console.error("Gagal mengambil data kelurahan", error);
+        } finally {
+          setIsLoadingRegions(prev => ({ ...prev, subdistricts: false }));
+        }
+      };
+      fetchSubdistricts();
+    } else {
+      setSubdistricts([]);
+    }
+  }, [formData.districtId]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
-      
-      // Jika provinsi berubah, ambil nama provinsi & reset kota dan kecamatan
+
+      // Jika provinsi berubah, ambil nama provinsi & reset downstream
       if (name === "provinceId") {
         const selectedProv = provinces.find(p => p.id.toString() === value);
         newData.provinceName = selectedProv ? selectedProv.name : "";
-        
         newData.cityId = "";
         newData.cityName = "";
         newData.districtId = "";
         newData.districtName = "";
-      } 
-      // Jika kota berubah, ambil nama kota & reset kecamatan
+        newData.subdistrictId = "";
+        newData.subdistrictName = "";
+      }
+      // Jika kota berubah, ambil nama kota & reset downstream
       else if (name === "cityId") {
         const selectedCity = cities.find(c => c.id.toString() === value);
         newData.cityName = selectedCity ? selectedCity.name : "";
-        
         newData.districtId = "";
         newData.districtName = "";
+        newData.subdistrictId = "";
+        newData.subdistrictName = "";
       }
-      // Jika kecamatan berubah, ambil nama kecamatan
+      // Jika kecamatan berubah, ambil nama kecamatan & reset kelurahan
       else if (name === "districtId") {
         const selectedDist = districts.find(d => d.id.toString() === value);
         newData.districtName = selectedDist ? selectedDist.name : "";
+        newData.subdistrictId = "";
+        newData.subdistrictName = "";
       }
-      
+      // Jika kelurahan berubah, ambil nama kelurahan
+      else if (name === "subdistrictId") {
+        const selectedSubdist = subdistricts.find(s => s.id.toString() === value);
+        newData.subdistrictName = selectedSubdist ? selectedSubdist.name : "";
+      }
+
       return newData;
     });
   };
@@ -150,15 +185,21 @@ export default function CreateStorePage() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Gabungkan seluruh detail alamat menjadi satu string sesuai permintaan
-    const fullAddress = `${formData.addressDetail}, Kec. ${formData.districtName}, ${formData.cityName}, Prov. ${formData.provinceName}`;
-    
+    // Gabungkan seluruh detail alamat menjadi satu string
+    const fullAddress = `${formData.addressDetail}, Kel. ${formData.subdistrictName}, Kec. ${formData.districtName}, ${formData.cityName}, Prov. ${formData.provinceName}`;
+
     const payload = {
       name: formData.name,
       address: fullAddress,
       type: "TOKO",
       description: formData.description,
       city: formData.cityName,
+      province_name: formData.provinceName || undefined,
+      city_name: formData.cityName || undefined,
+      district_name: formData.districtName || undefined,
+      subdistrict_name: formData.subdistrictName || undefined,
+      zip_code: formData.zipCode || undefined,
+      subdistrict_id: formData.subdistrictId || undefined,
     };
 
     console.log("Submitting store data:", payload);
@@ -321,6 +362,33 @@ export default function CreateStorePage() {
                   </span>
                 </div>
               </div>
+
+              {/* Subdistrict (Kelurahan) */}
+              <div className="space-y-2 md:col-span-2">
+                <label htmlFor="subdistrictId" className="text-[12px] font-semibold text-on-surface-variant flex justify-between">
+                  Kelurahan
+                  {isLoadingRegions.subdistricts && <span className="text-[10px] text-primary animate-pulse">Memuat...</span>}
+                </label>
+                <div className="relative">
+                  <select
+                    id="subdistrictId"
+                    name="subdistrictId"
+                    required
+                    disabled={!formData.districtId || isLoadingRegions.subdistricts}
+                    value={formData.subdistrictId}
+                    onChange={handleChange}
+                    className="w-full px-5 py-3.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none cursor-pointer disabled:opacity-60"
+                  >
+                    <option value="" disabled>Pilih Kelurahan</option>
+                    {subdistricts.map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[20px]">
+                    expand_more
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Address Detail */}
@@ -337,6 +405,22 @@ export default function CreateStorePage() {
                 onChange={handleChange}
                 placeholder="Nama jalan, gedung, nomor rumah, RT/RW, dan patokan"
                 className="w-full px-5 py-4 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant resize-none"
+              />
+            </div>
+
+            {/* Zip Code */}
+            <div className="space-y-2">
+              <label htmlFor="zipCode" className="text-[12px] font-semibold text-on-surface-variant">
+                Kode Pos
+              </label>
+              <input
+                id="zipCode"
+                name="zipCode"
+                type="text"
+                value={formData.zipCode}
+                onChange={handleChange}
+                placeholder="Contoh: 40123"
+                className="w-full px-5 py-4 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline-variant"
               />
             </div>
           </div>

@@ -36,6 +36,9 @@ export default function StoreProfilePage() {
     cityName: "",
     districtId: "",
     districtName: "",
+    subdistrictId: "",
+    subdistrictName: "",
+    zipCode: "",
     addressDetail: "",
   });
 
@@ -43,11 +46,13 @@ export default function StoreProfilePage() {
   const [provinces, setProvinces] = useState<Region[]>([]);
   const [cities, setCities] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<Region[]>([]);
-  
+  const [subdistricts, setSubdistricts] = useState<Region[]>([]);
+
   const [isLoadingRegions, setIsLoadingRegions] = useState({
     provinces: false,
     cities: false,
     districts: false,
+    subdistricts: false,
   });
 
   const fetchStoreProfile = async () => {
@@ -65,12 +70,16 @@ export default function StoreProfilePage() {
         city: data.city || "",
         type: data.type || "",
         logo: data.logo || "",
+        // Populate from individual DB columns (these are the new separate fields)
         provinceId: "",
-        provinceName: "",
+        provinceName: data.province_name || "",
         cityId: "",
-        cityName: "",
+        cityName: data.city_name || data.city || "",
         districtId: "",
-        districtName: "",
+        districtName: data.district_name || "",
+        subdistrictId: data.subdistrict_id || "",
+        subdistrictName: data.subdistrict_name || "",
+        zipCode: data.zip_code || "",
         addressDetail: "",
       });
     } catch (error) {
@@ -147,13 +156,34 @@ export default function StoreProfilePage() {
     }
   }, [formData.cityId]);
 
+  // 4. Fetch Subdistricts (Kelurahan) saat District berubah
+  useEffect(() => {
+    if (formData.districtId) {
+      const fetchSubdistricts = async () => {
+        setIsLoadingRegions(prev => ({ ...prev, subdistricts: true }));
+        try {
+          const response = await fetch(`/regional-api/villages/${formData.districtId}`);
+          const res = await response.json();
+          setSubdistricts(res.data || []);
+        } catch (error) {
+          console.error("Gagal mengambil data kelurahan", error);
+        } finally {
+          setIsLoadingRegions(prev => ({ ...prev, subdistricts: false }));
+        }
+      };
+      fetchSubdistricts();
+    } else {
+      setSubdistricts([]);
+    }
+  }, [formData.districtId]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
-      
-      // Jika provinsi berubah, ambil nama provinsi & reset kota dan kecamatan
+
+      // Jika provinsi berubah, ambil nama provinsi & reset downstream
       if (name === "provinceId") {
         const selectedProv = provinces.find(p => p.id.toString() === value);
         newData.provinceName = selectedProv ? selectedProv.name : "";
@@ -161,20 +191,31 @@ export default function StoreProfilePage() {
         newData.cityName = "";
         newData.districtId = "";
         newData.districtName = "";
-      } 
-      // Jika kota berubah, ambil nama kota & reset kecamatan
+        newData.subdistrictId = "";
+        newData.subdistrictName = "";
+      }
+      // Jika kota berubah, ambil nama kota & reset downstream
       else if (name === "cityId") {
         const selectedCity = cities.find(c => c.id.toString() === value);
         newData.cityName = selectedCity ? selectedCity.name : "";
         newData.districtId = "";
         newData.districtName = "";
+        newData.subdistrictId = "";
+        newData.subdistrictName = "";
       }
-      // Jika kecamatan berubah, ambil nama kecamatan
+      // Jika kecamatan berubah, ambil nama kecamatan & reset kelurahan
       else if (name === "districtId") {
         const selectedDist = districts.find(d => d.id.toString() === value);
         newData.districtName = selectedDist ? selectedDist.name : "";
+        newData.subdistrictId = "";
+        newData.subdistrictName = "";
       }
-      
+      // Jika kelurahan berubah, ambil nama kelurahan
+      else if (name === "subdistrictId") {
+        const selectedSubdist = subdistricts.find(s => s.id.toString() === value);
+        newData.subdistrictName = selectedSubdist ? selectedSubdist.name : "";
+      }
+
       return newData;
     });
   };
@@ -208,12 +249,33 @@ export default function StoreProfilePage() {
       // Jangan kirim state 'logo' lama agar tidak menimpa logo yang baru diupload di database
       const { logo, ...restData } = formData;
       const submitData: any = { ...restData };
-      
+
       // Jika user mengisi lokasi baru menggunakan form region
-      if (formData.provinceId && formData.cityId && formData.districtId && formData.addressDetail) {
-        submitData.address = `${formData.addressDetail}, Kec. ${formData.districtName}, ${formData.cityName}, Prov. ${formData.provinceName}`;
+      if (formData.provinceId && formData.cityId && formData.districtId && formData.subdistrictId && formData.addressDetail) {
+        submitData.address = `${formData.addressDetail}, Kel. ${formData.subdistrictName}, Kec. ${formData.districtName}, ${formData.cityName}, Prov. ${formData.provinceName}`;
         submitData.city = formData.cityName;
       }
+
+      // Always send individual regional fields (new separate DB columns)
+      // Only include fields that have values to avoid overwriting with NULL
+      if (formData.provinceName) submitData.province_name = formData.provinceName;
+      if (formData.cityName) submitData.city_name = formData.cityName;
+      if (formData.districtName) submitData.district_name = formData.districtName;
+      if (formData.subdistrictName) submitData.subdistrict_name = formData.subdistrictName;
+      if (formData.zipCode) submitData.zip_code = formData.zipCode;
+      if (formData.subdistrictId) submitData.subdistrict_id = formData.subdistrictId;
+
+      // Remove extraneous frontend-only fields before sending to API
+      delete submitData.provinceId;
+      delete submitData.provinceName;
+      delete submitData.cityId;
+      delete submitData.cityName;
+      delete submitData.districtId;
+      delete submitData.districtName;
+      delete submitData.subdistrictId;
+      delete submitData.subdistrictName;
+      delete submitData.zipCode;
+      delete submitData.addressDetail;
 
       const res = await axios.put(`/api/seller/store/update`, submitData, {
         withCredentials: true 
@@ -291,7 +353,8 @@ export default function StoreProfilePage() {
                 </h3>
                 <p className="text-on-surface-variant flex items-center gap-1 text-[14px]">
                   <span className="material-symbols-outlined text-[16px]">location_on</span>
-                  {storeData.city}
+                  {storeData.city_name || storeData.city || "-"}
+                  {storeData.province_name ? `, ${storeData.province_name}` : ""}
                 </p>
                 <div className="flex gap-4 pt-2">
                   <div className="flex items-center gap-1">
@@ -321,16 +384,34 @@ export default function StoreProfilePage() {
                 </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
                   <h4 className="font-label-md text-outline mb-1 text-[12px] uppercase tracking-wider">Alamat Lengkap</h4>
                   <p className="text-on-surface text-[15px] leading-relaxed">
                     {storeData.address || "-"}
                   </p>
                 </div>
-                <div>
-                  <h4 className="font-label-md text-outline mb-1 text-[12px] uppercase tracking-wider">Kota / Kabupaten</h4>
-                  <p className="text-on-surface text-[15px] font-medium">{storeData.city || "-"}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <h4 className="font-label-md text-outline mb-0.5 text-[11px] uppercase tracking-wider">Provinsi</h4>
+                    <p className="text-on-surface text-[14px]">{storeData.province_name || "-"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-label-md text-outline mb-0.5 text-[11px] uppercase tracking-wider">Kota / Kabupaten</h4>
+                    <p className="text-on-surface text-[14px]">{storeData.city_name || storeData.city || "-"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-label-md text-outline mb-0.5 text-[11px] uppercase tracking-wider">Kecamatan</h4>
+                    <p className="text-on-surface text-[14px]">{storeData.district_name || "-"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-label-md text-outline mb-0.5 text-[11px] uppercase tracking-wider">Kelurahan</h4>
+                    <p className="text-on-surface text-[14px]">{storeData.subdistrict_name || "-"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-label-md text-outline mb-0.5 text-[11px] uppercase tracking-wider">Kode Pos</h4>
+                    <p className="text-on-surface text-[14px]">{storeData.zip_code || "-"}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -498,6 +579,32 @@ export default function StoreProfilePage() {
                       </div>
                     </div>
 
+                    {/* Subdistrict (Kelurahan) */}
+                    <div className="space-y-2">
+                      <label htmlFor="subdistrictId" className="text-[12px] font-semibold text-on-surface-variant flex justify-between">
+                        Kelurahan
+                        {isLoadingRegions.subdistricts && <span className="text-[10px] text-primary animate-pulse">Memuat...</span>}
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="subdistrictId"
+                          name="subdistrictId"
+                          disabled={!formData.districtId || isLoadingRegions.subdistricts}
+                          value={formData.subdistrictId}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer disabled:opacity-60"
+                        >
+                          <option value="">Pilih Kelurahan</option>
+                          {subdistricts.map((sub) => (
+                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                          ))}
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[20px]">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
+
                     {/* Address Detail */}
                     <div className="space-y-2">
                       <label htmlFor="addressDetail" className="text-[12px] font-semibold text-on-surface-variant">
@@ -511,6 +618,22 @@ export default function StoreProfilePage() {
                         onChange={handleInputChange}
                         placeholder="Nama jalan, gedung, nomor rumah, RT/RW, dan patokan"
                         className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-outline-variant resize-none"
+                      />
+                    </div>
+
+                    {/* Zip Code */}
+                    <div className="space-y-2">
+                      <label htmlFor="zipCode" className="text-[12px] font-semibold text-on-surface-variant">
+                        Kode Pos
+                      </label>
+                      <input
+                        id="zipCode"
+                        name="zipCode"
+                        type="text"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        placeholder="Contoh: 40123"
+                        className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/50 rounded-xl text-[13px] focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-outline-variant"
                       />
                     </div>
                   </div>

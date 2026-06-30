@@ -6,8 +6,9 @@ import {
   createSubCategory,
   updateSubCategory,
   deleteSubCategory,
+  getCategories,
 } from "@/utils/admin-api";
-import type { SubProductCategory } from "@/types/product-category";
+import type { SubProductCategory, ProductCategory } from "@/types/product-category";
 import DeleteConfirmModal from "@/components/seller-product/delete-confirm-modal";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
@@ -16,14 +17,17 @@ export default function AdminSubCategoriesPage() {
   const { toasts, addToast, removeToast } = useToast();
 
   const [categories, setCategories] = useState<SubProductCategory[]>([]);
+  const [parentCategories, setParentCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [newCategoryId, setNewCategoryId] = useState<number | "">("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<number | "">("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Delete state
@@ -36,11 +40,19 @@ export default function AdminSubCategoriesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await getSubCategories();
-      if (res.status === "success") {
-        setCategories(res.data ?? []);
+      const [subRes, parentRes] = await Promise.all([
+        getSubCategories(),
+        getCategories(),
+      ]);
+      if (subRes.status === "success") {
+        setCategories(subRes.data ?? []);
       } else {
-        setError(res.message || "Gagal memuat sub kategori");
+        setError(subRes.message || "Gagal memuat sub kategori");
+      }
+      if (parentRes.status === "success") {
+        setParentCategories(parentRes.data ?? []);
+      } else {
+        console.warn("Gagal memuat kategori induk:", (parentRes as any).message);
       }
     } catch (err: any) {
       setError(
@@ -51,6 +63,21 @@ export default function AdminSubCategoriesPage() {
     }
   }, []);
 
+  // Resolve parent category name from sub-category
+  const getParentName = useCallback(
+    (cat: SubProductCategory): string => {
+      // Backend returns product_categories as nested relation object
+      if (cat.product_categories?.title) return cat.product_categories.title;
+      return "-";
+    },
+    []
+  );
+
+  // Resolve parent category ID from sub-category (returns undefined if not set)
+  function getParentId(cat: SubProductCategory): number | undefined {
+    return cat.product_categories?.id;
+  }
+
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
@@ -60,16 +87,18 @@ export default function AdminSubCategoriesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newTitle.trim();
-    if (!trimmed) return;
+    if (!trimmed || newCategoryId === "") return;
 
     setIsSubmitting(true);
 
     try {
-      const res = await createSubCategory({ title: trimmed });
+      const res = await createSubCategory({ title: trimmed, sub_product_categories_id: newCategoryId as number });
       if (res.status === "success") {
         setNewTitle("");
+        setNewCategoryId("");
         const createdTitle = res.data?.title ?? trimmed;
-        addToast(`Sub kategori "${createdTitle}" berhasil dibuat`, "success");
+        const parentName = parentCategories.find((c) => c.id === newCategoryId)?.title ?? "";
+        addToast(`Sub kategori "${createdTitle}" berhasil dibuat${parentName ? ` di kategori "${parentName}"` : ""}`, "success");
         await fetchCategories();
       } else {
         addToast(res.message || "Gagal membuat sub kategori", "error");
@@ -89,25 +118,47 @@ export default function AdminSubCategoriesPage() {
   const startEdit = (cat: SubProductCategory) => {
     setEditingId(cat.id);
     setEditingTitle(cat.title);
+    setEditingCategoryId(getParentId(cat) ?? "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditingTitle("");
+    setEditingCategoryId("");
   };
 
   const handleSaveEdit = async (id: number) => {
     const trimmed = editingTitle.trim();
     if (!trimmed) return;
 
+    const currentCat = categories.find((c) => c.id === id);
+
     setIsSaving(true);
     try {
-      const res = await updateSubCategory(id, { title: trimmed });
+      const payload: { title?: string; sub_product_categories_id?: number } = {};
+      if (trimmed !== (currentCat?.title ?? "")) {
+        payload.title = trimmed;
+      }
+      if (editingCategoryId !== "" && editingCategoryId !== (getParentId(currentCat!) ?? "")) {
+        payload.sub_product_categories_id = editingCategoryId as number;
+      }
+      // Always send at least one field
+      if (!payload.title && payload.sub_product_categories_id === undefined) {
+        payload.title = trimmed;
+      }
+
+      const res = await updateSubCategory(id, payload);
       if (res.status === "success") {
         setCategories((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, title: trimmed } : c))
+          prev.map((c) => {
+            if (c.id === id) {
+              return { ...c, title: trimmed };
+            }
+            return c;
+          })
         );
         addToast(`Sub kategori berhasil diubah menjadi "${trimmed}"`, "success");
+        await fetchCategories();
       } else {
         addToast(res.message || "Gagal mengubah sub kategori", "error");
       }
@@ -179,9 +230,22 @@ export default function AdminSubCategoriesPage() {
             className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-[14px] text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             disabled={isSubmitting}
           />
+          <select
+            value={newCategoryId}
+            onChange={(e) => setNewCategoryId(e.target.value ? Number(e.target.value) : "")}
+            className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-[14px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-w-[200px]"
+            disabled={isSubmitting}
+          >
+            <option value="">Pilih Kategori Induk...</option>
+            {parentCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.title}
+              </option>
+            ))}
+          </select>
           <button
             type="submit"
-            disabled={isSubmitting || !newTitle.trim()}
+            disabled={isSubmitting || !newTitle.trim() || newCategoryId === ""}
             className="px-6 py-3 bg-primary text-white rounded-xl text-[14px] font-semibold hover:shadow-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
           >
             {isSubmitting ? (
@@ -267,6 +331,9 @@ export default function AdminSubCategoriesPage() {
                   <th className="text-left px-6 py-3 text-[12px] font-semibold text-on-surface-variant tracking-wider uppercase">
                     Nama Sub Kategori
                   </th>
+                  <th className="text-left px-6 py-3 text-[12px] font-semibold text-on-surface-variant tracking-wider uppercase">
+                    Kategori Induk
+                  </th>
                   <th className="text-center px-6 py-3 text-[12px] font-semibold text-on-surface-variant tracking-wider uppercase">
                     Aksi
                   </th>
@@ -299,6 +366,28 @@ export default function AdminSubCategoriesPage() {
                       ) : (
                         <span className="text-[14px] font-medium text-on-surface">
                           {cat.title}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Parent Category: normal or inline edit */}
+                    <td className="px-6 py-4">
+                      {editingId === cat.id ? (
+                        <select
+                          value={editingCategoryId}
+                          onChange={(e) => setEditingCategoryId(e.target.value ? Number(e.target.value) : "")}
+                          className="w-full bg-surface-container-low border border-primary/30 rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Pilih Kategori Induk...</option>
+                          {parentCategories.map((pc) => (
+                            <option key={pc.id} value={pc.id}>
+                              {pc.title}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-[13px] text-on-surface-variant">
+                          {getParentName(cat)}
                         </span>
                       )}
                     </td>
