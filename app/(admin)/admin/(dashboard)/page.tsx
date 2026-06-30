@@ -351,8 +351,14 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-soft border border-outline-variant/20 overflow-visible">
+          <h3 className="text-[14px] font-semibold text-on-surface mb-1">Pesanan Baru</h3>
+          <p className="text-[11px] text-on-surface-variant mb-5">30 hari terakhir (transaksi lunas)</p>
+          <LineChart data={orderData} valueKey="count" colorClass="bg-tertiary" formatValue={(v) => String(v)} maxValue={Math.max(...orderData.map((d) => d.count), 1)} />
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-soft border border-outline-variant/20 overflow-visible">
           <h3 className="text-[14px] font-semibold text-on-surface mb-1">Pendapatan Layanan</h3>
-          <p className="text-[11px] text-on-surface-variant mb-5">30 hari terakhir</p>
+          <p className="text-[11px] text-on-surface-variant mb-5">30 hari terakhir (transaksi lunas)</p>
           <LineChart data={orderData} valueKey="revenue" colorClass="bg-tertiary" formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}rb` : String(v)} maxValue={maxRevenue} />
         </div>
       </div>

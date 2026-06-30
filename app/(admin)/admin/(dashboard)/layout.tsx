@@ -28,6 +28,7 @@ export default function AdminDashboardLayout({
   else if (pathname.includes("/categories")) currentMenu = "Kategori Produk";
   else if (pathname.includes("/users")) currentMenu = "Users";
   else if (pathname.includes("/sellers")) currentMenu = "Sellers";
+  else if (pathname.includes("/orders")) currentMenu = "Pesanan";
   if (pathname.includes("/products")) currentMenu = "Produk";
 
   if (isLoading) {
@@ -156,6 +157,27 @@ export default function AdminDashboardLayout({
               storefront
             </span>
             <span className="text-[14px]">Sellers</span>
+          </Link>
+
+          <Link
+            href="/admin/orders"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              currentMenu === "Pesanan"
+                ? "bg-primary-container text-primary font-bold shadow-sm"
+                : "text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={
+                currentMenu === "Pesanan"
+                  ? { fontVariationSettings: "'FILL' 1" }
+                  : {}
+              }
+            >
+              receipt_long
+            </span>
+            <span className="text-[14px]">Pesanan</span>
           </Link>
 
           <Link
