@@ -5,7 +5,7 @@ import { useState, useCallback, useRef } from "react";
 export interface Toast {
   id: number;
   message: string;
-  type: "error" | "success";
+  type: "error" | "success" | "info";
 }
 
 let globalId = 0;

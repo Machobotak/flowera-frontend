@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAddresses } from "@/hooks/use-addresses";
 import { useShippingOptions } from "@/hooks/use-shipping-options";
@@ -15,6 +16,38 @@ import CourierSelectModal from "@/components/buyer-checkout/courier-select-modal
 import OrderSummarySidebar from "@/components/buyer-checkout/order-summary-sidebar";
 import QrLightbox from "@/components/buyer-checkout/qr-lightbox";
 import type { ShippingOption } from "@/types/checkout";
+
+/* ──────────────────────────── QR Countdown ──────────────────────────── */
+
+function QrCountdown({ expiredAt, createdAt }: { expiredAt: string | null; createdAt: string }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const expireAt = expiredAt
+      ? new Date(expiredAt)
+      : new Date(new Date(createdAt || Date.now()).getTime() + 24 * 3600000);
+
+    const tick = () => {
+      const diff = expireAt.getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft("⏰ Waktu pembayaran habis"); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimeLeft(`⏳ ${h}j ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}d`);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [expiredAt, createdAt]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <p className={`text-[13px] font-semibold mb-3 ${timeLeft.includes("habis") ? "text-error" : "text-tertiary"}`}>
+      {timeLeft}
+    </p>
+  );
+}
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -140,7 +173,7 @@ export default function CheckoutPage() {
           setCourierModalStoreId, fetchShippingOptions, handleShippingSelect } = useShippingOptions();
   const { previewData, previewLoading, isPlacingOrder, createdOrder, errorMsg, setErrorMsg,
           verifyCheckoutPreview, placeOrder } = useCheckoutFlow();
-  const { qrUrl, paymentStatus, isCheckingPayment, qrLightbox, setQrLightbox,
+  const { qrUrl, paymentStatus, expiredAt, isCheckingPayment, qrLightbox, setQrLightbox,
           setQrFromCheckout, checkPaymentStatus } = usePaymentStatus();
 
   /* ── Load direct-buy items from sessionStorage after hydration ── */
@@ -156,7 +189,8 @@ export default function CheckoutPage() {
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.qty, 0);
   const itemCount = orderItems.reduce((sum, item) => sum + item.qty, 0);
   const shippingTotal = Object.values(selectedShipping).reduce((sum, s) => sum + s.shipping_cost, 0);
-  const total = subtotal + shippingTotal;
+  const serviceFee = 1000;
+  const total = subtotal + shippingTotal + serviceFee;
 
   const uniqueStoreIds = useMemo(
     () => [...new Set(orderItems.map((item) => item.store_id))],
@@ -189,6 +223,33 @@ export default function CheckoutPage() {
     }
   }
 
+  // Auto-fetch payment status when QR appears to get the real expired_at
+  useEffect(() => {
+    if (qrUrl && createdOrder) {
+      checkPaymentStatus(createdOrder);
+    }
+  }, [qrUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const router = useRouter();
+
+  // Redirect to Pesanan Saya when payment is settled/paid
+  useEffect(() => {
+    if (paymentStatus === "settlement" || paymentStatus === "PAID") {
+      const timer = setTimeout(() => router.push("/profile"), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus, router]);
+
+  // Warn before leaving after checkout (step 5 = payment screen)
+  useEffect(() => {
+    if (step !== 5) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step]);
+
   function handleCheckPayment() {
     checkPaymentStatus(createdOrder);
   }
@@ -200,7 +261,7 @@ export default function CheckoutPage() {
   }, {});
 
   return (
-    <main className="pt-6 pb-16 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+    <main className="pt-6 pb-20 md:pb-16 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
       {/* Breadcrumb */}
       <nav className="flex gap-2 text-[12px] leading-4 tracking-[0.03em] font-medium text-on-surface-variant mb-2">
         <Link className="hover:text-primary transition-colors" href="/">Home</Link>
@@ -855,6 +916,8 @@ export default function CheckoutPage() {
                     <span className="material-symbols-outlined text-primary text-[22px]">qr_code</span>
                     Bayar dengan QRIS
                   </h3>
+                  {/* Countdown */}
+                  <QrCountdown expiredAt={expiredAt} createdAt={createdOrder?.createdAt || ""} />
                   {/* QR Image — large + tap to open lightbox */}
                   <button
                     type="button"
@@ -973,6 +1036,7 @@ export default function CheckoutPage() {
           subtotal={subtotal}
           itemCount={itemCount}
           shippingTotal={shippingTotal}
+          serviceFee={serviceFee}
           total={total}
           selectedShipping={selectedShipping}
         />

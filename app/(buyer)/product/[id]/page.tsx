@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
+import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import ToastContainer from "@/components/toast-container";
 import { StarRating, LoadingState, ErrorState, NotFoundState } from "@/components/ui";
@@ -99,6 +100,7 @@ export default function ProductDetailPage() {
   const productId = params.id as string;
 
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
   const [product, setProduct] = useState<ProductData | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -175,7 +177,7 @@ export default function ProductDetailPage() {
   const totalPrice = variantPrice + addonsTotal;
 
   return (
-    <main className="max-w-container-max mx-auto px-margin-desktop space-y-stack-lg py-stack-md">
+    <main className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop space-y-stack-lg py-stack-md pb-20 md:pb-16">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* ── Breadcrumb ── */}
@@ -391,6 +393,10 @@ export default function ProductDetailPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => {
+                    if (!user && !authLoading) {
+                      router.push("/login");
+                      return;
+                    }
                     if (!product) return;
 
                     // Get the first product image
@@ -454,13 +460,16 @@ export default function ProductDetailPage() {
                   Order Now
                   <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </button>
-                <button className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]">
+                <button
+                  onClick={() => addToast("Fitur keranjang sedang dalam pengembangan", "info")}
+                  className="w-full border border-[#8c4a5c] text-[#8c4a5c] py-4 rounded-lg font-body text-[14px] tracking-[0.05em] font-semibold hover:bg-[#8c4a5c]/5 transition-colors active:scale-[0.98]"
+                >
                   Add to Cart
                 </button>
-                <button className="w-full text-[#8c4a5c] py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-[#8c4a5c]/5 rounded-lg transition-colors">
+                <Link href="/coming-soon" className="w-full text-[#8c4a5c] py-2 font-body text-[14px] tracking-[0.05em] font-semibold flex items-center justify-center gap-2 hover:bg-[#8c4a5c]/5 rounded-lg transition-colors">
                   <span className="material-symbols-outlined text-sm">favorite_border</span>
                   Save Design
-                </button>
+                </Link>
               </div>
             </div>
           </div>

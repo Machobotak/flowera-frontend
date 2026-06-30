@@ -26,13 +26,13 @@ const ACCOUNT_TABS: { id: AccountTab; icon: string; label: string }[] = [
 const SIDEBAR_LINKS = [
   { icon: "person", label: "Akun Saya", href: "/profile/account", active: true, filled: true },
   { icon: "shopping_bag", label: "Pesanan Saya", href: "/profile" },
-  { icon: "notifications", label: "Notifikasi", href: "#" },
-  { icon: "favorite", label: "Wishlist", href: "#" },
+  { icon: "notifications", label: "Notifikasi", href: "/coming-soon" },
+  { icon: "favorite", label: "Wishlist", href: "/coming-soon" },
 ];
 
 const SIDEBAR_LINKS_BOTTOM = [
-  { icon: "confirmation_number", label: "Voucher", href: "#" },
-  { icon: "settings", label: "Pengaturan", href: "#" },
+  { icon: "confirmation_number", label: "Voucher", href: "/coming-soon" },
+  { icon: "settings", label: "Pengaturan", href: "/coming-soon" },
 ];
 
 export type { AccountTab };

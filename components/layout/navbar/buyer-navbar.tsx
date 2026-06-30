@@ -1,33 +1,35 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 
 /* ──────────────────────────── Constants ──────────────────────────── */
 
 const FILL_STYLE = { fontVariationSettings: "'FILL' 1" } as const;
 
-const MOBILE_NAV_ITEMS = [
-  { icon: "home", label: "Home", href: "/", active: true },
-  { icon: "grid_view", label: "Categories", href: "#" },
-  { icon: "local_mall", label: "Orders", href: "/profile" },
-  { icon: "person", label: "Profile", href: "/profile" },
-];
 
 const USER_MENU_ITEMS = [
   { icon: "person", label: "Akun Saya", href: "/profile/account" },
   { icon: "shopping_bag", label: "Pesanan Saya", href: "/profile" },
-  { icon: "favorite", label: "Wishlist", href: "#" },
-  { icon: "confirmation_number", label: "Voucher", href: "#" },
-  { icon: "settings", label: "Pengaturan", href: "#" },
+  { icon: "favorite", label: "Wishlist", href: "/coming-soon" },
+  { icon: "confirmation_number", label: "Voucher", href: "/coming-soon" },
+  { icon: "settings", label: "Pengaturan", href: "/coming-soon" },
 ];
 
 /* ──────────────────────────── Component ──────────────────────────── */
 
 export default function BuyerNavbar() {
+  const pathname = usePathname();
   const { isLoggedIn, user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const mobileNavItems = [
+    { icon: "home", label: "Home", href: "/", active: pathname === "/" },
+    { icon: "local_mall", label: "Orders", href: "/profile", active: pathname === "/profile" || pathname.startsWith("/profile?") },
+    { icon: "person", label: "Profile", href: "/profile/account", active: pathname.startsWith("/profile/account") },
+  ];
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function BuyerNavbar() {
     <>
       {/* Desktop Header */}
       <header className="sticky top-0 w-full z-50 shadow-sm bg-surface/90 backdrop-blur-md">
-        <div className="flex items-center justify-between px-margin-desktop py-4 max-w-container-max mx-auto gap-8">
+        <div className="flex items-center justify-between px-margin-mobile md:px-margin-desktop py-3 md:py-4 max-w-container-max mx-auto gap-4 md:gap-8">
           {/* Brand */}
           <a
             className="shrink-0"
@@ -64,8 +66,8 @@ export default function BuyerNavbar() {
             <img src="/logo-v1-transparant.png" alt="Flowera" className="h-7 w-auto" />
           </a>
 
-          {/* Search Bar */}
-          <div className="flex-grow max-w-2xl relative">
+          {/* Search Bar — desktop only */}
+          <div className="hidden md:block flex-grow max-w-2xl relative">
             <input
               className="w-full bg-surface-container-low border-none rounded-xl px-12 py-3 focus:ring-2 focus:ring-primary/20 font-body-md text-on-surface-variant transition-all"
               placeholder="Search for bouquets, florists, or occasions..."
@@ -76,22 +78,22 @@ export default function BuyerNavbar() {
             </span>
           </div>
 
+          {/* Spacer for mobile */}
+          <div className="flex-grow md:hidden" />
+
           {/* Trailing Actions */}
           <div className="flex items-center gap-6 shrink-0">
-            <div className="flex gap-4 border-r border-outline-variant/30 pr-6">
+            <div className="hidden md:flex gap-4 border-r border-outline-variant/30 pr-6">
               <a href="/cart" className="relative hover:opacity-80 transition-opacity">
                 <span className="material-symbols-outlined text-on-surface-variant">
                   shopping_cart
                 </span>
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  2
-                </span>
               </a>
-              <button className="hover:opacity-80 transition-opacity">
+              <a href="/coming-soon" className="hover:opacity-80 transition-opacity">
                 <span className="material-symbols-outlined text-on-surface-variant">
                   notifications
                 </span>
-              </button>
+              </a>
             </div>
 
             {/* ── Auth Section ── */}
@@ -193,10 +195,10 @@ export default function BuyerNavbar() {
             ) : (
               /* Not logged-in: Login & Register buttons */
               <div className="flex gap-3">
-                <a href="/login" className="px-5 py-2 font-label-md text-primary hover:bg-primary-container/20 rounded-xl transition-all">
+                <a href="/login" className="px-4 py-2 text-[13px] font-semibold bg-primary text-white rounded-xl hover:shadow-float active:scale-95 transition-all">
                   Masuk
                 </a>
-                <a href="/register" className="px-5 py-2 font-label-md bg-primary text-white rounded-xl shadow-soft hover:shadow-float active:scale-95 transition-all">
+                <a href="/register" className="hidden md:block px-5 py-2 font-label-md bg-primary text-white rounded-xl shadow-soft hover:shadow-float active:scale-95 transition-all">
                   Daftar
                 </a>
               </div>
@@ -207,7 +209,7 @@ export default function BuyerNavbar() {
 
       {/* Mobile Bottom Nav */}
       <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface shadow-[0_-4px_12px_rgba(31,77,46,0.08)] md:hidden rounded-t-xl">
-        {MOBILE_NAV_ITEMS.map((item) => (
+        {mobileNavItems.map((item) => (
           <a
             key={item.label}
             className={`flex flex-col items-center justify-center ${
