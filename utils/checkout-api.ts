@@ -17,9 +17,7 @@ import type {
   StoreShippingOption,
 } from "@/types/checkout";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const BASE = `${API_BASE}/api/user/order`;
+const BASE = "/api/user/order";
 
 /** Build axios config with Bearer token from localStorage */
 function authConfig() {

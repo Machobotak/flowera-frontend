@@ -14,9 +14,7 @@ import type {
   ShippingCostResponse,
 } from "@/types/shipping";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const BASE = `${API_BASE}/api/user/shipping`;
+const BASE = "/api/user/shipping";
 
 /** Build axios config with Bearer token from localStorage */
 function authConfig() {

@@ -10,8 +10,7 @@ import type {
   ConfirmOrderImageResponse,
 } from "@/types/order";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE = "";
 
 /** Build axios config with Bearer token from localStorage */
 function authConfig() {
